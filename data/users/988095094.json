@@ -2,12 +2,13 @@
   "chatId": 988095094,
   "firstName": "Manikanta",
   "username": "Ram_Sai_1995",
-  "joinedAt": "2026-03-07T12:02:04.644Z",
+  "joinedAt": "2026-03-14T11:45:53.761Z",
   "memory": {
-    "firstMeet": "Not set",
-    "firstChat": "Not set",
-    "specialMoment": "Not set",
-    "photoUrl": "Not set",
-    "gifUrl": "Not set"
-  }
+    "firstMeet": "Yesterday",
+    "firstChat": "Day before yesterday",
+    "specialMoment": "Before before yesterday",
+    "photoUrl": "AgACAgUAAxkBAAIEB2m1SDtNrb-gWBcyyuKKtPV1wuFJAAITDWsb5wuxVbZlp3GLopBNAQADAgADeQADOgQ",
+    "gifUrl": "CgACAgUAAxkBAAIEMGm1SqwpaqH-uBuaFcCv5tqY9qoSAAKUGgAC5wuxVZPWFnHgaE1SOgQ"
+  },
+  "timeline": []
 }

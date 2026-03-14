@@ -1,32 +1,41 @@
 const fs = require("fs");
 const path = require("path");
 
-const memoryFilePath = path.join(__dirname, "../data/users");
+const usersDir = path.join(__dirname, "../data/users");
 
-if (!fs.existsSync(memoryFilePath)) {
-    fs.mkdirSync(memoryFilePath,{recursive: true});
-}
-
-function getUserFile(chatId) {
-  return path.join(memoryFilePath, `${chatId}.json`);
+// Ensure users folder exists
+if (!fs.existsSync(usersDir)) {
+  fs.mkdirSync(usersDir, { recursive: true });
 }
 
 function getUserData(chatId) {
-  const file = getUserFile(chatId);
-  if (!fs.existsSync(file)) {
-    const newUser = {
-      firstMeet: "not set",
-      firstChat: "not set",
-      specialMoment: "not set",
-      gifUrl:
-        "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExcmxvMDR1dXBlaHJ2cmNpZzlxeWkzN3BxZHRoM2plMWNnZjZ2eWJudSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/lF3EunMA9XpIY/giphy.gif",
-      photoUrl:
-        "https://imgs.search.brave.com/NadlfyqaO1-69xiNrcR1HjYQDgQtjjsXRQz0X9Ud5js/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly9tLm1l/ZGlhLWFtYXpvbi5j/b20vaW1hZ2VzL0kv/NzFPeS1MNDlqc0wu/anBn",
+  const filePath = path.join(usersDir, `${chatId}.json`);
+
+  if (!fs.existsSync(filePath)) {
+    return null;
+  }
+
+  const user = JSON.parse(fs.readFileSync(filePath, "utf8"));
+
+  // Auto-repair old users
+  if (!user.memory) {
+    user.memory = {
+      firstMeet: "Not set",
+      firstChat: "Not set",
+      specialMoment: "Not set",
+      photoUrl: "",
+      gifUrl: "",
     };
 
-    fs.writeFileSync(file, JSON.stringify(newUser, null, 2));
-    return newUser;
+    fs.writeFileSync(filePath, JSON.stringify(user, null, 2), "utf8");
   }
-  return JSON.parse(fs.readFileSync(file));
+
+  if (!user.timeline) {
+    user.timeline = [];
+    fs.writeFileSync(filePath, JSON.stringify(user, null, 2), "utf8");
+  }
+
+  return user;
 }
+
 module.exports = getUserData;

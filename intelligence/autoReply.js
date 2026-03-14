@@ -1,14 +1,7 @@
-const allowedUser = [Number(process.env.CHAT_ID)];
-
 module.exports = function (bot, sendWithTyping) {
   bot.on("message", (msg) => {
     const chatId = msg.chat.id;
-    console.log("Incoming message from Chat ID:", chatId, "| Text:", msg.text);
-      if (!allowedUser.includes(chatId)) {
-          sendWithTyping( chatId, "Sorry, you are not authorized to interact with this bot.");
-          console.log("Unauthorized user. Ignoring message.");
-          return;
-        }
+
     if (!msg.text) return;
     const text = msg.text.toLowerCase();
     if (text.startsWith("/")) return; // ignore commands

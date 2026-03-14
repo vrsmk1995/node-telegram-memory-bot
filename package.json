@@ -2,10 +2,10 @@
   "name": "love-bot",
   "version": "1.0.0",
   "description": "Telegram romantic bot",
-  "main": "index.js",
+  "main": "bot.js",
   "scripts": {
-    "start": "node index.js",
-    "dev": "nodemon index.js",
+    "start": "node bot.js",
+    "dev": "nodemon bot.js",
     "test-cron": "node testCron.js"
   },
   "dependencies": {

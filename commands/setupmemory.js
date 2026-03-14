@@ -1,49 +1,121 @@
 const updateUserData = require("../utils/updateUserData");
 
-const memorySetupState = {};
+const setupStep = {};
 
 module.exports = function (bot) {
-  bot.onText(/\/setupmemory/, (msg) => {
+  // Start full memory setup
+  bot.onText(/\/setupmemory/i, (msg) => {
     const chatId = msg.chat.id;
 
-    memorySetupState[chatId] = { step: 1 };
+    setupStep[chatId] = { step: 1 };
 
-    bot.sendMessage(chatId, "When did you first meet?");
+    console.log("SetupMemory started for", chatId);
+
+    bot.sendMessage(
+      chatId,
+      "❤️ Let's set up your full memory journey!\n\nWhen did you first meet?",
+    );
   });
 
+  // Handle text steps
   bot.on("message", (msg) => {
     const chatId = msg.chat.id;
 
-    if (!memorySetupState[chatId]) return;
+    if (!msg.text) return;
+    if (msg.text.startsWith("/")) return;
+    if (!setupStep[chatId]) return;
 
-    const text = msg.text;
+    const current = setupStep[chatId];
 
-    const state = memorySetupState[chatId];
+    console.log(
+      "SetupMemory TEXT step:",
+      current.step,
+      "| ChatId:",
+      chatId,
+      "| Text:",
+      msg.text,
+    );
 
-    if (state.step === 1) {
-      updateUserData(chatId, "firstMeet", text);
+    try {
+      // Step 1: first meet
+      if (current.step === 1) {
+        updateUserData(chatId, "firstMeet", msg.text);
+        current.step = 2;
 
-      state.step = 2;
+        bot.sendMessage(chatId, "💬 Nice! When did you first chat?");
+      }
 
-      bot.sendMessage(chatId, "Where did you first chat?");
-      return;
+      // Step 2: first chat
+      else if (current.step === 2) {
+        updateUserData(chatId, "firstChat", msg.text);
+        current.step = 3;
+
+        bot.sendMessage(chatId, "✨ Beautiful! Tell me your special moment.");
+      }
+
+      // Step 3: special moment
+      else if (current.step === 3) {
+        updateUserData(chatId, "specialMoment", msg.text);
+        current.step = 4;
+
+        bot.sendMessage(
+          chatId,
+          "📸 Great! Now please upload your memory photo (JPG/PNG).",
+        );
+      }
+    } catch (err) {
+      console.error("SetupMemory text error:", err);
+      bot.sendMessage(chatId, "Something went wrong while saving text memory.");
     }
+  });
 
-    if (state.step === 2) {
-      updateUserData(chatId, "firstChat", text);
+  // Handle photo step
+  bot.on("photo", (msg) => {
+    const chatId = msg.chat.id;
 
-      state.step = 3;
+    if (!setupStep[chatId]) return;
+    if (setupStep[chatId].step !== 4) return;
 
-      bot.sendMessage(chatId, "What is your special moment?");
-      return;
+    try {
+      const photo = msg.photo[msg.photo.length - 1]; // highest resolution
+      const fileId = photo.file_id;
+
+      updateUserData(chatId, "photoUrl", fileId);
+
+      setupStep[chatId].step = 5;
+
+      console.log("SetupMemory PHOTO saved for", chatId, "| fileId:", fileId);
+
+      bot.sendMessage(chatId, "🎞 Awesome! Now please upload your memory GIF.");
+    } catch (err) {
+      console.error("SetupMemory photo error:", err);
+      bot.sendMessage(chatId, "Failed to save memory photo. Please try again.");
     }
+  });
 
-    if (state.step === 3) {
-      updateUserData(chatId, "specialMoment", text);
+  // Handle GIF step
+  bot.on("animation", (msg) => {
+    const chatId = msg.chat.id;
 
-      delete memorySetupState[chatId];
+    if (!setupStep[chatId]) return;
+    if (setupStep[chatId].step !== 5) return;
 
-      bot.sendMessage(chatId, "Memory saved successfully ❤️");
+    try {
+      const fileId = msg.animation.file_id;
+
+      updateUserData(chatId, "gifUrl", fileId);
+
+      console.log("SetupMemory GIF saved for", chatId, "| fileId:", fileId);
+
+      delete setupStep[chatId];
+
+      bot.sendMessage(
+        chatId,
+        "Your full memory setup is complete ❤️\n\nUse /memory to see your beautiful memories.",
+      );
+    } catch (err) {
+      console.error("SetupMemory GIF error:", err);
+      bot.sendMessage(chatId, "Failed to save memory GIF. Please try again.");
     }
   });
 };

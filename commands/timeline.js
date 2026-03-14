@@ -1,16 +1,36 @@
-module.exports = function (bot, sendWithTyping) {
+const fs = require("fs");
+const path = require("path");
+
+module.exports = function (bot) {
   bot.onText(/\/timeline/, (msg) => {
     const chatId = msg.chat.id;
 
-    const timeline = `Relationship Timeline ❤️
-    
+    const filePath = path.join(__dirname, "../data/users", `${chatId}.json`);
 
-2022 → First conversation
-2023 → Became closer
-2024 → Strong bond
-2025 → Still growing stronger 💕
-2026 → Forever together ❤️`;
+    if (!fs.existsSync(filePath)) {
+      bot.sendMessage(chatId, "Please run /start first.");
+      return;
+    }
 
-    sendWithTyping(bot, chatId, timeline, 2000);
+    const user = JSON.parse(fs.readFileSync(filePath, "utf8"));
+
+    if (!user.timeline || user.timeline.length === 0) {
+      bot.sendMessage(
+        chatId,
+        "No timeline memories yet. Use /addtimeline to add one.",
+      );
+      return;
+    }
+
+    // sort timeline by year
+    const timeline = user.timeline.sort((a, b) => a.year - b.year);
+
+    let message = "📅 Your Memory Timeline\n\n";
+
+    timeline.forEach((item) => {
+      message += `📌 ${item.year}\n${item.event}\n\n`;
+    });
+
+    bot.sendMessage(chatId, message);
   });
 };
