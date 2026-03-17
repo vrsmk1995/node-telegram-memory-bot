@@ -8,21 +8,38 @@ module.exports = function (bot, sendWithTyping) {
       const result = registerUser(msg);
       const user = result.user || result;
 
-      const welcomeMessage = result.newUser
-        ? `Welcome ${user.firstName}! ❤️
+      let welcomeMessage = "";
+
+      if (result.newUser) {
+        welcomeMessage = `Welcome ${user.firstName}!
+    
 
 Your profile has been created successfully.
 
-Use the buttons below to explore the bot ✨`
-        : `Welcome back ${user.firstName}! ❤️
+ Before Using the all features below to explore the bot ✨`;
+      } else if (!user.profileCompleted) {
+        welcomeMessage = `Welcome Back ${user.firstName} ! ❤️
+      
+Your signup is not complete yet.
+Please use /signup to continue ✨`;
+      } else {
+        welcomeMessage = `Welcome back ${user.firstName}! ❤️
 
-Use the buttons below to continue ✨`;
+Use the menu below to continue ✨`;
+      }
 
       await sendWithTyping(bot, chatId, welcomeMessage, 1500);
 
       await bot.sendMessage(chatId, "💖 Choose an option:", {
         reply_markup: {
           inline_keyboard: [
+            [
+              {
+                text: "Profile",
+                callback_data: "profile",
+              },
+              { text: "Sign Up", callback_data: "signup" },
+            ],
             [
               { text: "❤️ Love", callback_data: "love" },
               { text: "🎁 Surprise", callback_data: "surprise" },

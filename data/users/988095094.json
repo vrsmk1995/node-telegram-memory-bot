@@ -2,13 +2,20 @@
   "chatId": 988095094,
   "firstName": "Manikanta",
   "username": "Ram_Sai_1995",
-  "joinedAt": "2026-03-14T11:45:53.761Z",
-  "memory": {
-    "firstMeet": "Yesterday",
-    "firstChat": "Day before yesterday",
-    "specialMoment": "Before before yesterday",
-    "photoUrl": "AgACAgUAAxkBAAIEB2m1SDtNrb-gWBcyyuKKtPV1wuFJAAITDWsb5wuxVbZlp3GLopBNAQADAgADeQADOgQ",
-    "gifUrl": "CgACAgUAAxkBAAIEMGm1SqwpaqH-uBuaFcCv5tqY9qoSAAKUGgAC5wuxVZPWFnHgaE1SOgQ"
+  "joinedAt": "2026-03-17T11:55:57.861Z",
+  "profileComleted": false,
+  "profile": {
+    "name": "0db826618a26c3499c1f952da0d03edb:6e164e0a3880d7bec197c16af6679ecb6947db8341affd8028154d556560ac60",
+    "dob": "1678b4b05a6225dd66f82c4b9adbf3f1:9172260bab3e8a831ed17d2997583c8c",
+    "gender": "8ecb5402f38f64ac7a463c7c397c0eb3:964f167603f61d2c44c5f7bbca0e0ae1"
   },
-  "timeline": []
+  "memory": {
+    "firstMeet": "",
+    "firstChat": "",
+    "specialMoment": "",
+    "photoUrl": "",
+    "gifUrl": ""
+  },
+  "timeline": [],
+  "profileCompleted": true
 }

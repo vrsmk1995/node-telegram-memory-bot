@@ -1,4 +1,5 @@
 const getUserData = require("../utils/userData");
+const { decrypt } = require("../utils/cryptoHelper");
 
 module.exports = function (bot, sendWithTyping) {
   bot.on("callback_query", async (query) => {
@@ -42,17 +43,26 @@ module.exports = function (bot, sendWithTyping) {
           const user = getUserData(chatId);
 
           const memory = user.memory || {
-            firstMeet: "Not set",
-            firstChat: "Not set",
-            specialMoment: "Not set",
+            firstMeet: "",
+            firstChat: "",
+            specialMoment: "",
             photoUrl: "",
             gifUrl: "",
           };
+          const firstMeet = memory.firstMeet
+            ? decrypt(memory.firstMeet)
+            : "Not set";
+          const firstChat = memory.firstChat
+            ? decrypt(memory.firstChat)
+            : "Not set";
+          const specialMoment = memory.specialMoment
+            ? decrypt(memory.specialMoment)
+            : "Not set";
 
           if (
-            memory.firstMeet === "Not set" &&
-            memory.firstChat === "Not set" &&
-            memory.specialMoment === "Not set"
+            firstMeet === "Not set" &&
+            firstChat === "Not set" &&
+            specialMoment === "Not set"
           ) {
             await bot.sendMessage(
               chatId,
@@ -63,16 +73,16 @@ module.exports = function (bot, sendWithTyping) {
 
           const message = `Our Memories ❤️
 
-First Meet: ${memory.firstMeet}
-First Chat: ${memory.firstChat}
-Special Moment: ${memory.specialMoment}`;
+First Meet: ${firstMeet}
+First Chat: ${firstChat}
+Special Moment: ${specialMoment}`;
 
           await sendWithTyping(bot, chatId, message, 1500);
 
           if (memory.photoUrl) {
             setTimeout(async () => {
               try {
-                await bot.sendChatAction(chatId, "upload_photo");
+                // await bot.sendChatAction(chatId, "upload_photo");
                 await bot.sendPhoto(chatId, memory.photoUrl, {
                   caption: "A special moment we captured together 📸",
                 });
@@ -85,7 +95,7 @@ Special Moment: ${memory.specialMoment}`;
           if (memory.gifUrl) {
             setTimeout(async () => {
               try {
-                await bot.sendChatAction(chatId, "upload_document");
+                // await bot.sendChatAction(chatId, "upload_document");
                 await bot.sendAnimation(chatId, memory.gifUrl, {
                   caption: "A fun memory we shared 🎉",
                 });
@@ -124,7 +134,21 @@ Special Moment: ${memory.specialMoment}`;
           await bot.sendMessage(chatId, "Use /lovecode 🔢");
           break;
         }
+        case "signup": {
+          await bot.sendMessage(
+            chatId,
+            "Please type /signup to complete your profile ❤️",
+          );
+          break;
+        }
 
+        case "profile": {
+          await bot.sendMessage(
+            chatId,
+            "Please type /profile to view your profile 👤",
+          );
+          break;
+        }
         case "reset": {
           await bot.sendMessage(
             chatId,

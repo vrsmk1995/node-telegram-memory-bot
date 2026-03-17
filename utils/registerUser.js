@@ -21,10 +21,16 @@ function registerUser(msg) {
       firstName: msg.from.first_name || "User",
       username: msg.from.username || "",
       joinedAt: new Date().toISOString(),
+      profileComleted: false,
+      profile: {
+        name: "",
+        dob: "",
+        gender: "",
+      },
       memory: {
-        firstMeet: "Not set",
-        firstChat: "Not set",
-        specialMoment: "Not set",
+        firstMeet: "",
+        firstChat: "",
+        specialMoment: "",
         photoUrl: "",
         gifUrl: "",
       },
@@ -35,13 +41,24 @@ function registerUser(msg) {
     newUser = true;
   } else {
     user = JSON.parse(fs.readFileSync(filePath, "utf8"));
+    if (typeof user.profileComleted !== "boolean") {
+      user.profileComleted = false;
+    }
+
+    if (!user.profile) {
+      user.profile = {
+        name: "",
+        dob: "",
+        gender: "",
+      };
+    }
 
     // Auto-repair old users
     if (!user.memory) {
       user.memory = {
-        firstMeet: "Not set",
-        firstChat: "Not set",
-        specialMoment: "Not set",
+        firstMeet: "",
+        firstChat: "",
+        specialMoment: "",
         photoUrl: "",
         gifUrl: "",
       };

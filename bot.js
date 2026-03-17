@@ -33,6 +33,8 @@ const autoReply = require("./intelligence/autoReply");
 
 // Scheduler
 const dailyMessages = require("./scheduler/dailyMessages");
+const signupCommand = require("./commands/signup");
+const profileCommand = require("./commands/profile");
 
 // Create bot
 const bot = new TelegramBot(config.token, { polling: true });
@@ -69,6 +71,10 @@ startCommand(bot, sendWithTyping);
 helpCommand(bot, sendWithTyping);
 resetCommand(bot, sendWithTyping);
 
+//Profile
+signupCommand(bot);
+profileCommand(bot, sendWithTyping);
+
 // 2️⃣ Memory setup flows BEFORE auto reply
 setupMemoryCommand(bot, sendWithTyping);
 
@@ -84,6 +90,10 @@ lovemeterCommand(bot, sendWithTyping);
 reasonsCommand(bot, sendWithTyping);
 surpriseCommand(bot, sendWithTyping);
 lovecodeCommand(bot, sendWithTyping);
+
+
+
+
 
 // 5️⃣ Inline button callbacks AFTER commands
 menuCallbacks(bot, sendWithTyping);

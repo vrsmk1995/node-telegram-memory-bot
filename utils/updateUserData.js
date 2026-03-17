@@ -1,5 +1,6 @@
 const fs = require("fs");
 const path = require("path");
+const { encrypt } = require("./cryptoHelper");
 
 const usersDir = path.join(__dirname, "../data/users");
 
@@ -29,8 +30,13 @@ function updateUserData(chatId, field, value) {
     };
   }
 
-  // Update only memory fields
-  user.memory[field] = value;
+  const encryptedFields = ["firstMeet", "firstChat", "specialMoment"];
+
+  if (encryptedFields.includes(field)) {
+    user.memory[field] = encrypt(value);
+  } else {
+    user.memory[field] = value;
+  }
 
   fs.writeFileSync(filePath, JSON.stringify(user, null, 2), "utf8");
 
