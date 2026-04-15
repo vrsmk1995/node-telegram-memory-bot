@@ -1,4 +1,5 @@
 const registerUser = require("../utils/registerUser");
+const sendMainMenu = require("../utils/sendMainMenu");
 
 module.exports = function (bot, sendWithTyping) {
   bot.onText(/\/start/i, async (msg) => {
@@ -8,53 +9,41 @@ module.exports = function (bot, sendWithTyping) {
       const result = registerUser(msg);
       const user = result.user || result;
 
-      let welcomeMessage = "";
-
-      if (result.newUser) {
-        welcomeMessage = `Welcome ${user.firstName}!
-    
-
-Your profile has been created successfully.
-
- Before Using the all features below to explore the bot ✨`;
-      } else if (!user.profileCompleted) {
-        welcomeMessage = `Welcome Back ${user.firstName} ! ❤️
-      
-Your signup is not complete yet.
-Please use /signup to continue ✨`;
-      } else {
-        welcomeMessage = `Welcome back ${user.firstName}! ❤️
-
-Use the menu below to continue ✨`;
+      // If profile is completed, show full unlocked menu
+      if (user.profileCompleted) {
+        await sendMainMenu(bot, chatId, user.firstName || "there");
+        return;
       }
+
+      // If profile is NOT completed, show onboarding + limited menu
+      const welcomeMessage = `Welcome ${user.firstName || "there"}! ❤️
+
+✨ How to use Love Bot ✨
+
+1️⃣ First, complete your signup using /signup
+2️⃣ After signup, all bot features will unlock
+3️⃣ Then use /setupmemory to save your special memories
+4️⃣ Use /memory anytime to view your saved memories
+5️⃣ Use the menu buttons below for quick access
+
+⚠️ Important: Without signup, other features will not work.`;
+
+      const buttons = [
+        [
+          { text: "📝 Signup", callback_data: "signup" },
+          { text: "👤 Profile", callback_data: "profile" },
+        ],
+        [
+          { text: "❓ Help", callback_data: "help" },
+          { text: "🔄 Reset", callback_data: "reset" },
+        ],
+      ];
 
       await sendWithTyping(bot, chatId, welcomeMessage, 1500);
 
       await bot.sendMessage(chatId, "💖 Choose an option:", {
         reply_markup: {
-          inline_keyboard: [
-            [
-              {
-                text: "Profile",
-                callback_data: "profile",
-              },
-              { text: "Sign Up", callback_data: "signup" },
-            ],
-            [
-              { text: "❤️ Love", callback_data: "love" },
-              { text: "🎁 Surprise", callback_data: "surprise" },
-            ],
-            [
-              { text: "🧠 Memory", callback_data: "memory" },
-              { text: "❓ Help", callback_data: "help" },
-            ],
-            [
-              { text: "💌 Reasons", callback_data: "reasons" },
-              { text: "🔢 Love Code", callback_data: "lovecode" },
-            ],
-
-            [{ text: "🔄 Reset", callback_data: "reset" }],
-          ],
+          inline_keyboard: buttons,
         },
       });
     } catch (err) {

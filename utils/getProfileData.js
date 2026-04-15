@@ -25,26 +25,43 @@ function calculateAge(dobString) {
 }
 
 function getProfileData(chatId) {
-  const filePath = path.join(usersDir, `${chatId}.json`);
+  try {
+    const filePath = path.join(usersDir, `${chatId}.json`);
 
-  if (!fs.existsSync(filePath)) return null;
+    if (!fs.existsSync(filePath)) return null;
 
-  const user = JSON.parse(fs.readFileSync(filePath, "utf8"));
+    const user = JSON.parse(fs.readFileSync(filePath, "utf8"));
 
-  if (!user.profile) return null;
+    if (!user.profile) return null;
 
-  const name = user.profile.name ? decrypt(user.profile.name) : "Not set";
-  const dob = user.profile.dob ? decrypt(user.profile.dob) : "Not set";
-  const gender = user.profile.gender ? decrypt(user.profile.gender) : "Not set";
-  const phone = user.profile.phone ? decrypt(user.profile, phone) : "Not set";
+    const name = user.profile.name ? decrypt(user.profile.name) : "Not set";
+    const dob = user.profile.dob ? decrypt(user.profile.dob) : "Not set";
+    const gender = user.profile.gender
+      ? decrypt(user.profile.gender)
+      : "Not set";
+    const phone = user.profile.phoneEncrypted
+      ? decrypt(user.profile.phoneEncrypted)
+      : "";
+    const phoneMasked = user.profile.phoneMasked || "Not provided";
+    let age = "Not set";
+    if (dob !== "Not set") {
+      age = decrypt(user.profile.age) || calculateAge(dob);
+    } else if (dob !== "Not set" && age === "Invalid DOB") {
+      age = calculateAge(dob);
+    }
 
-  return {
-    name,
-    dob,
-    gender,
-    age: dob !== "Not set" ? calculateAge(dob) : "Not set",
-    phone,
-  };
+    return {
+      name,
+      dob,
+      gender,
+      age,
+      phone,
+      phoneMasked,
+    };
+  } catch (error) {
+    console.error("Error getting profile data:", error);
+    return null;
+  }
 }
 
 module.exports = getProfileData;

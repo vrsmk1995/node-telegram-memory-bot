@@ -1,24 +1,37 @@
+const requireSignup = require("../utils/requireSignUp");
 const updateUserData = require("../utils/updateUserData");
+const { clearSignupStep } = require("../services/signupService");
+const { editProfileStep } = require("../state/editProfileState");
+const { setupStep } = require("../state/setupMemoryState");
 
-const setupStep = {};
-
-module.exports = function (bot) {
+function setupmemoryHandler(bot) {
   // Start full memory setup
-  bot.onText(/\/setupmemory/i, (msg) => {
+  bot.onText(/\/setupmemory/i, async (msg) => {
     const chatId = msg.chat.id;
 
+    if (!requireSignup(bot, chatId)) return;
+
+    // Clear conflicting flows
+    clearSignupStep(chatId);
+
+    if (editProfileStep[chatId]) {
+      delete editProfileStep[chatId];
+    }
+
+    // Reset any old memory flow before starting fresh
+    delete setupStep[chatId];
     setupStep[chatId] = { step: 1 };
 
     console.log("SetupMemory started for", chatId);
 
-    bot.sendMessage(
+    await bot.sendMessage(
       chatId,
       "❤️ Let's set up your full memory journey!\n\nWhen did you first meet?",
     );
   });
 
   // Handle text steps
-  bot.on("message", (msg) => {
+  bot.on("message", async (msg) => {
     const chatId = msg.chat.id;
 
     if (!msg.text) return;
@@ -26,6 +39,7 @@ module.exports = function (bot) {
     if (!setupStep[chatId]) return;
 
     const current = setupStep[chatId];
+    const text = msg.text.trim();
 
     console.log(
       "SetupMemory TEXT step:",
@@ -33,68 +47,127 @@ module.exports = function (bot) {
       "| ChatId:",
       chatId,
       "| Text:",
-      msg.text,
+      text,
     );
 
     try {
       // Step 1: first meet
       if (current.step === 1) {
-        updateUserData(chatId, "firstMeet", msg.text);
+        updateUserData(chatId, "firstMeet", text);
         current.step = 2;
 
-        bot.sendMessage(chatId, "💬 Nice! When did you first chat?");
+        await bot.sendMessage(chatId, "💬 Nice! When did you first chat?");
+        return;
       }
 
       // Step 2: first chat
       else if (current.step === 2) {
-        updateUserData(chatId, "firstChat", msg.text);
+        updateUserData(chatId, "firstChat", text);
         current.step = 3;
 
-        bot.sendMessage(chatId, "✨ Beautiful! Tell me your special moment.");
+        await bot.sendMessage(
+          chatId,
+          "✨ Beautiful! Tell me your special moment.",
+        );
+        return;
       }
 
       // Step 3: special moment
       else if (current.step === 3) {
-        updateUserData(chatId, "specialMoment", msg.text);
+        updateUserData(chatId, "specialMoment", text);
         current.step = 4;
 
-        bot.sendMessage(
+        await bot.sendMessage(
           chatId,
-          "📸 Great! Now please upload your memory photo (JPG/PNG).",
+          "📸 Great! Now please upload your memory photo (JPG/PNG).\n\nOr type *Skip* to continue without photo.",
+          { parse_mode: "Markdown" },
         );
+        return;
+      }
+
+      // Step 4: photo skip only if user typed Skip
+      else if (current.step === 4) {
+        if (text.toLowerCase() === "skip") {
+          updateUserData(chatId, "photoUrl", "");
+          current.step = 5;
+
+          await bot.sendMessage(
+            chatId,
+            "🎞 Great! Now please upload your memory GIF.\n\nOr type *Skip* to finish without GIF.",
+            { parse_mode: "Markdown" },
+          );
+          return;
+        }
+
+        await bot.sendMessage(
+          chatId,
+          "⚠️ Please either:\n\n• Upload a photo\nOR\n• Type *Skip*",
+          { parse_mode: "Markdown" },
+        );
+        return;
+      }
+
+      // Step 5: gif skip only if user typed Skip
+      else if (current.step === 5) {
+        if (text.toLowerCase() === "skip") {
+          updateUserData(chatId, "gifUrl", "");
+          delete setupStep[chatId];
+
+          await bot.sendMessage(
+            chatId,
+            "✅ Your full memory setup is complete ❤️\n\nUse /memory to see your beautiful memories.",
+          );
+          return;
+        }
+
+        await bot.sendMessage(
+          chatId,
+          "⚠️ Please either:\n\n• Upload a GIF\nOR\n• Type *Skip*",
+          { parse_mode: "Markdown" },
+        );
+        return;
       }
     } catch (err) {
       console.error("SetupMemory text error:", err);
-      bot.sendMessage(chatId, "Something went wrong while saving text memory.");
+      await bot.sendMessage(
+        chatId,
+        "Something went wrong while saving text memory.",
+      );
     }
   });
 
   // Handle photo step
-  bot.on("photo", (msg) => {
+  bot.on("photo", async (msg) => {
     const chatId = msg.chat.id;
 
     if (!setupStep[chatId]) return;
     if (setupStep[chatId].step !== 4) return;
 
     try {
-      const photo = msg.photo[msg.photo.length - 1]; // highest resolution
+      const photo = msg.photo[msg.photo.length - 1];
       const fileId = photo.file_id;
 
       updateUserData(chatId, "photoUrl", fileId);
-
       setupStep[chatId].step = 5;
 
       console.log("SetupMemory PHOTO saved for", chatId, "| fileId:", fileId);
 
-      bot.sendMessage(chatId, "🎞 Awesome! Now please upload your memory GIF.");
+      await bot.sendMessage(
+        chatId,
+        "🎞 Awesome! Now please upload your memory GIF.\n\nOr type *Skip* to finish without GIF.",
+        { parse_mode: "Markdown" },
+      );
     } catch (err) {
       console.error("SetupMemory photo error:", err);
-      bot.sendMessage(chatId, "Failed to save memory photo. Please try again.");
+      await bot.sendMessage(
+        chatId,
+        "Failed to save memory photo. Please try again.",
+      );
     }
   });
 
   // Handle GIF step
-  bot.on("animation", (msg) => {
+  bot.on("animation", async (msg) => {
     const chatId = msg.chat.id;
 
     if (!setupStep[chatId]) return;
@@ -109,13 +182,18 @@ module.exports = function (bot) {
 
       delete setupStep[chatId];
 
-      bot.sendMessage(
+      await bot.sendMessage(
         chatId,
-        "Your full memory setup is complete ❤️\n\nUse /memory to see your beautiful memories.",
+        "✅ Your full memory setup is complete ❤️\n\nUse /memory to see your beautiful memories.",
       );
     } catch (err) {
       console.error("SetupMemory GIF error:", err);
-      bot.sendMessage(chatId, "Failed to save memory GIF. Please try again.");
+      await bot.sendMessage(
+        chatId,
+        "Failed to save memory GIF. Please try again.",
+      );
     }
   });
-};
+}
+
+module.exports = setupmemoryHandler;

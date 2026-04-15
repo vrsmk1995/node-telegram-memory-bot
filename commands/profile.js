@@ -1,10 +1,12 @@
 const fs = require("fs");
 const path = require("path");
 const getProfileData = require("../utils/getProfileData");
+const requireSignup = require("../utils/requireSignUp");
 
 module.exports = function (bot, sendWithTyping) {
   bot.onText(/\/profile/i, async (msg) => {
     const chatId = msg.chat.id;
+    if (!requireSignup(bot, chatId)) return;
     const filePath = path.join(__dirname, "../data/users", `${chatId}.json`);
 
     if (!fs.existsSync(filePath)) {
@@ -30,8 +32,7 @@ Name: ${profile.name}
 Date of Birth: ${profile.dob}
 Age: ${profile.age}
 Gender: ${profile.gender}
-Phone:${profile.phone}`;
-  
+Phone:${profile.phoneMasked}`;
 
     try {
       await sendWithTyping(bot, chatId, message, 1500);

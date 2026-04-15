@@ -1,9 +1,11 @@
 const fs = require("fs");
 const path = require("path");
+const requireSignup = require("../utils/requireSignUp");
 
 module.exports = function (bot) {
   bot.onText(/\/timeline/, (msg) => {
     const chatId = msg.chat.id;
+    if (!requireSignup(bot, chatId)) return;
 
     const filePath = path.join(__dirname, "../data/users", `${chatId}.json`);
 

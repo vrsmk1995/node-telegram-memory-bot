@@ -1,8 +1,11 @@
-module.exports = function (bot, sendWithTyping) {
-  bot.onText(/\/lovecode/, (msg) => {
-    const chatId = msg.chat.id;
+const requireSignup = require("../utils/requireSignUp");
 
-    sendWithTyping(
+module.exports = function (bot, sendWithTyping) {
+  bot.onText(/\/lovecode/, async (msg) => {
+    const chatId = msg.chat.id;
+    if (!requireSignup(bot, chatId)) return;
+
+    await sendWithTyping(
       bot,
       chatId,
       "🔐 Love Code Activated\n\nYou + Me = Forever ❤️",

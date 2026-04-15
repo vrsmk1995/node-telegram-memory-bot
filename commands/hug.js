@@ -1,6 +1,9 @@
+const requireSignup = require("../utils/requireSignUp");
+
 module.exports = function (bot, sendWithTyping) {
   bot.onText(/\/hug/, (msg) => {
     const chatId = msg.chat.id;
+    if (!requireSignup(bot, chatId)) return;
 
     try {
       sendWithTyping(bot, chatId, "Sending you a big virtual hug! 🤗❤️", 2000);

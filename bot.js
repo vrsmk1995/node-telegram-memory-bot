@@ -9,6 +9,12 @@ const startCommand = require("./commands/start");
 const helpCommand = require("./commands/help");
 const resetCommand = require("./commands/reset");
 
+//handlers
+
+// const setupStartHandler = require("./handlers/start");
+// const setupCallbackHandler = require("./handlers/callbacks");
+//  const setupMessageHandler = require("./handlers/messages");
+
 // Love / fun commands
 const loveCommand = require("./commands/love");
 const hugCommand = require("./commands/hug");
@@ -26,15 +32,16 @@ const timelineCommand = require("./commands/timeline");
 const addTimelineCommand = require("./commands/addtimeline");
 
 // Inline button callbacks
-const menuCallbacks = require("./commands/menuCallback");
+const menuCallbacks = require("./handlers/menuCallback");
 
 // Intelligence / auto reply
-const autoReply = require("./intelligence/autoReply");
+// const autoReply = require("./intelligence/autoReply");
 
 // Scheduler
-const dailyMessages = require("./scheduler/dailyMessages");
+// const dailyMessages = require("./scheduler/dailyMessages");
 const signupCommand = require("./commands/signup");
 const profileCommand = require("./commands/profile");
+const setupeditProfileCommand = require("./handlers/editProfile")
 
 // Create bot
 const bot = new TelegramBot(config.token, { polling: true });
@@ -74,8 +81,10 @@ resetCommand(bot, sendWithTyping);
 //Profile
 signupCommand(bot);
 profileCommand(bot, sendWithTyping);
+setupeditProfileCommand(bot, sendWithTyping);
 
 // 2️⃣ Memory setup flows BEFORE auto reply
+
 setupMemoryCommand(bot, sendWithTyping);
 
 // 3️⃣ Memory display + timeline
@@ -91,7 +100,9 @@ reasonsCommand(bot, sendWithTyping);
 surpriseCommand(bot, sendWithTyping);
 lovecodeCommand(bot, sendWithTyping);
 
+//handlers
 
+//  setupMessageHandler(bot, sendWithTyping);
 
 
 
@@ -99,14 +110,14 @@ lovecodeCommand(bot, sendWithTyping);
 menuCallbacks(bot, sendWithTyping);
 
 // 6️⃣ Auto reply LAST (important)
-autoReply(bot, sendWithTyping);
+// autoReply(bot, sendWithTyping);
 
 // 7️⃣ Scheduler (optional)
 // If you still use static CHAT_ID in .env, this will work only for one user.
 // For public multi-user bots, this should be redesigned later.
-if (config.chatId) {
-  dailyMessages(bot, config.chatId);
-}
+// if (config.chatId) {
+//   dailyMessages(bot, config.chatId);
+// }
 
 // Polling error handling
 bot.on("polling_error", (error) => {

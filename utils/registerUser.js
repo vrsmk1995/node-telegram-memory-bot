@@ -21,11 +21,13 @@ function registerUser(msg) {
       firstName: msg.from.first_name || "User",
       username: msg.from.username || "",
       joinedAt: new Date().toISOString(),
-      profileComleted: false,
+      profileCompleted: false,
       profile: {
         name: "",
         dob: "",
+        age: "",
         gender: "",
+        phone: "",
       },
       memory: {
         firstMeet: "",
@@ -41,19 +43,40 @@ function registerUser(msg) {
     newUser = true;
   } else {
     user = JSON.parse(fs.readFileSync(filePath, "utf8"));
-    if (typeof user.profileComleted !== "boolean") {
-      user.profileComleted = false;
+
+    // 🔥 Auto-fix old typo field
+    if (
+      typeof user.profileCompleted !== "boolean" &&
+      typeof user.profileCompleted === "boolean"
+    ) {
+      user.profileCompleted = user.profileCompleted;
+      delete user.profileCompleted;
     }
 
+    // Ensure profileCompleted exists
+    if (typeof user.profileCompleted !== "boolean") {
+      user.profileCompleted = false;
+    }
+
+    // Ensure profile object exists
     if (!user.profile) {
       user.profile = {
         name: "",
         dob: "",
+        age: "",
         gender: "",
+        phone: "",
       };
+    } else {
+      // Auto-repair missing profile fields
+      if (typeof user.profile.name !== "string") user.profile.name = "";
+      if (typeof user.profile.dob !== "string") user.profile.dob = "";
+      if (typeof user.profile.age !== "string") user.profile.age = "";
+      if (typeof user.profile.gender !== "string") user.profile.gender = "";
+      if (typeof user.profile.phone !== "string") user.profile.phone = "";
     }
 
-    // Auto-repair old users
+    // Auto-repair old users memory object
     if (!user.memory) {
       user.memory = {
         firstMeet: "",
@@ -62,13 +85,21 @@ function registerUser(msg) {
         photoUrl: "",
         gifUrl: "",
       };
+    } else {
+      if (typeof user.memory.firstMeet !== "string") user.memory.firstMeet = "";
+      if (typeof user.memory.firstChat !== "string") user.memory.firstChat = "";
+      if (typeof user.memory.specialMoment !== "string")
+        user.memory.specialMoment = "";
+      if (typeof user.memory.photoUrl !== "string") user.memory.photoUrl = "";
+      if (typeof user.memory.gifUrl !== "string") user.memory.gifUrl = "";
     }
 
-    if (!user.timeline) {
+    // Ensure timeline exists
+    if (!Array.isArray(user.timeline)) {
       user.timeline = [];
     }
 
-    // keep firstName / username updated from Telegram profile
+    // Keep Telegram profile info updated
     user.firstName = msg.from.first_name || user.firstName || "User";
     user.username = msg.from.username || user.username || "";
 

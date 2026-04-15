@@ -1,9 +1,11 @@
 const fs = require("fs");
 const path = require("path");
+const requireSignup = require("../utils/requireSignUp");
 
 module.exports = function (bot) {
   bot.onText(/\/addtimeline (.+)/, (msg, match) => {
     const chatId = msg.chat.id;
+    if (!requireSignup(bot, chatId)) return;
 
     const args = match[1].split(" ");
 

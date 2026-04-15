@@ -1,6 +1,9 @@
+const requireSignup = require("../utils/requireSignUp");
+
 module.exports = function (bot, sendWithTyping) {
   bot.on("message", (msg) => {
     const chatId = msg.chat.id;
+    if (!requireSignup(bot, chatId)) return;
 
     if (!msg.text) return;
     const text = msg.text.toLowerCase();
