@@ -1,12 +1,9 @@
-const fs = require("fs");
-const path = require("path");
 const sendWithTyping = require("../utils/sendWithTyping");
-const getUserData = require("../utils/userData");
-
-const USERS_DIR = path.join(__dirname, "..", "data", "users");
+const getUserData = require("../utils/getUserData");
+const User = require("../models/User");
 
 async function showResetConfirmation(bot, chatId) {
-  await sendWithTyping(bot, chatId, "Opening reset options...", 700);
+  await sendWithTyping(bot, chatId, "Opening reset options...", 2000);
 
   await bot.sendMessage(
     chatId,
@@ -62,7 +59,7 @@ This action cannot be undone 💔`;
 
 async function handleResetMemories(bot, chatId) {
   try {
-    const user = getUserData(chatId);
+    const user = await getUserData(chatId);
 
     if (!user) {
       await bot.sendMessage(
@@ -71,46 +68,45 @@ async function handleResetMemories(bot, chatId) {
       );
       return;
     }
-
-    if (!user.memory) {
+    const hashMemory =
+      user.memory &&
+      (user.memory.firstMeet ||
+        user.memory.firstChat ||
+        user.memory.specialMoment ||
+        user.memory.photoUrl ||
+        user.memory.gifUrl);
+    if (!hashMemory) {
       await bot.sendMessage(
         chatId,
-        "ℹ️ No saved memories found yet. Use /setupmemory to create special memories ❤️",
+        "⚠️ No memories found to reset. use /setupmemory to create your special moments here ❤️",
       );
       return;
     }
-
-    // Safer for encrypted storage: remove whole memory object
-    delete user.memory;
-
-    const userFile = path.join(USERS_DIR, `${chatId}.json`);
-    fs.writeFileSync(userFile, JSON.stringify(user, null, 2), "utf8");
-
+    user.memory = {
+      firstMeet: "",
+      firstChat: "",
+      specialMoment: "",
+      photoUrl: "",
+      gifUrl: "",
+    };
+    await user.save();
     await bot.sendMessage(
       chatId,
-      "🧠 *Your memories have been reset successfully!*\n\nYour profile is still safe 💖",
-      {
-        parse_mode: "Markdown",
-      },
+      "✅ Your memories have been reset. You can create new ones using /setupmemory ❤️",
     );
   } catch (error) {
-    console.error("Reset memories error:", error);
+    console.error("Error resetting memories for chatId:", chatId, error);
     await bot.sendMessage(
       chatId,
-      "❌ Failed to reset memories. Please try again.",
+      "❌ Something went wrong while resetting your memories. Please try again.",
     );
   }
 }
 
 async function handleResetConfirm(bot, chatId, userStates = {}) {
   try {
-    const userFile = path.join(USERS_DIR, `${chatId}.json`);
+    await User.deleteOne({ chatId });
 
-    if (fs.existsSync(userFile)) {
-      fs.unlinkSync(userFile);
-    }
-
-    // Clear temporary in-memory flow state
     if (userStates && userStates[chatId]) {
       delete userStates[chatId];
     }
@@ -122,11 +118,6 @@ async function handleResetConfirm(bot, chatId, userStates = {}) {
 You can now start fresh anytime 💖`,
       {
         parse_mode: "Markdown",
-        reply_markup: {
-          inline_keyboard: [
-            [{ text: "✨ Start Again", callback_data: "signup" }],
-          ],
-        },
       },
     );
   } catch (error) {

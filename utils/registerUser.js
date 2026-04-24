@@ -1,22 +1,13 @@
-const fs = require("fs");
-const path = require("path");
+const User = require("../models/User");
 
-const usersDir = path.join(__dirname, "../data/users");
-
-// Ensure users folder exists
-if (!fs.existsSync(usersDir)) {
-  fs.mkdirSync(usersDir, { recursive: true });
-}
-
-function registerUser(msg) {
+async function registerUser(msg) {
   const chatId = msg.chat.id;
-  const filePath = path.join(usersDir, `${chatId}.json`);
 
+  let user = await User.findOne({ chatId });
   let newUser = false;
-  let user;
 
-  if (!fs.existsSync(filePath)) {
-    user = {
+  if (!user) {
+    user = await User.create({
       chatId,
       firstName: msg.from.first_name || "User",
       username: msg.from.username || "",
@@ -28,6 +19,8 @@ function registerUser(msg) {
         age: "",
         gender: "",
         phone: "",
+        phoneEncrypted: "",
+        phoneMasked: "",
       },
       memory: {
         firstMeet: "",
@@ -37,28 +30,13 @@ function registerUser(msg) {
         gifUrl: "",
       },
       timeline: [],
-    };
+    });
 
-    fs.writeFileSync(filePath, JSON.stringify(user, null, 2), "utf8");
     newUser = true;
   } else {
-    user = JSON.parse(fs.readFileSync(filePath, "utf8"));
+    user.firstName = msg.from.first_name || user.firstName || "User";
+    user.username = msg.from.username || user.username || "";
 
-    // 🔥 Auto-fix old typo field
-    if (
-      typeof user.profileCompleted !== "boolean" &&
-      typeof user.profileCompleted === "boolean"
-    ) {
-      user.profileCompleted = user.profileCompleted;
-      delete user.profileCompleted;
-    }
-
-    // Ensure profileCompleted exists
-    if (typeof user.profileCompleted !== "boolean") {
-      user.profileCompleted = false;
-    }
-
-    // Ensure profile object exists
     if (!user.profile) {
       user.profile = {
         name: "",
@@ -66,14 +44,9 @@ function registerUser(msg) {
         age: "",
         gender: "",
         phone: "",
+        phoneEncrypted: "",
+        phoneMasked: "",
       };
-    } else {
-      // Auto-repair missing profile fields
-      if (typeof user.profile.name !== "string") user.profile.name = "";
-      if (typeof user.profile.dob !== "string") user.profile.dob = "";
-      if (typeof user.profile.age !== "string") user.profile.age = "";
-      if (typeof user.profile.gender !== "string") user.profile.gender = "";
-      if (typeof user.profile.phone !== "string") user.profile.phone = "";
     }
 
     // Auto-repair old users memory object
@@ -85,25 +58,18 @@ function registerUser(msg) {
         photoUrl: "",
         gifUrl: "",
       };
-    } else {
-      if (typeof user.memory.firstMeet !== "string") user.memory.firstMeet = "";
-      if (typeof user.memory.firstChat !== "string") user.memory.firstChat = "";
-      if (typeof user.memory.specialMoment !== "string")
-        user.memory.specialMoment = "";
-      if (typeof user.memory.photoUrl !== "string") user.memory.photoUrl = "";
-      if (typeof user.memory.gifUrl !== "string") user.memory.gifUrl = "";
     }
 
     // Ensure timeline exists
-    if (!Array.isArray(user.timeline)) {
+    if (!user.timeline) {
       user.timeline = [];
     }
 
-    // Keep Telegram profile info updated
-    user.firstName = msg.from.first_name || user.firstName || "User";
-    user.username = msg.from.username || user.username || "";
+    if (typeof user.profileCompleted !== "boolean") {
+      user.profileCompleted = !!user.profileCompleted;
+    }
 
-    fs.writeFileSync(filePath, JSON.stringify(user, null, 2), "utf8");
+    await user.save();
   }
 
   return { newUser, user };

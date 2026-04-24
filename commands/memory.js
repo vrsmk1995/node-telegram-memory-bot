@@ -1,6 +1,6 @@
 const fs = require("fs");
 const path = require("path");
-const getUserData = require("../utils/userData");
+const getUserData = require("../utils/getUserData");
 const { decrypt } = require("../utils/cryptoHelper");
 const requireSignup = require("../utils/requireSignUp");
 const { signupStep } = require("../services/signupService");

@@ -1,5 +1,5 @@
 const updateProfileData = require("../utils/updateProfileData");
-const getUserData = require("../utils/userData");
+const getUserData = require("../utils/getUserData");
 const getProfileData = require("../utils/getProfileData");
 const isProfileComplete = require("../utils/isProfileComplete");
 const sendMainMenu = require("../utils/sendMainMenu");

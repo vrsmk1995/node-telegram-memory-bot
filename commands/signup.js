@@ -71,7 +71,7 @@ module.exports = function (bot) {
           return;
         }
 
-        updateProfileData(chatId, "name", text);
+        await updateProfileData(chatId, "name", text);
         current.step = 2;
 
         await bot.sendMessage(
@@ -91,7 +91,8 @@ module.exports = function (bot) {
           return;
         }
 
-        updateProfileData(chatId, "dob", text);
+        await updateProfileData(chatId, "dob", text);
+
         current.step = 3;
 
         await bot.sendMessage(
@@ -116,7 +117,7 @@ module.exports = function (bot) {
             ? "Prefer not to say"
             : text.charAt(0).toUpperCase() + text.slice(1).toLowerCase();
 
-        updateProfileData(chatId, "gender", gender);
+        await updateProfileData(chatId, "gender", gender);
         current.step = 4;
 
         await bot.sendMessage(
@@ -223,7 +224,7 @@ module.exports = function (bot) {
         return;
       }
 
-      updateProfileData(chatId, "phone", phone);
+      await updateProfileData(chatId, "phone", phone);
 
       const user = completeSignup(chatId);
 

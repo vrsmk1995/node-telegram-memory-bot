@@ -1,22 +1,13 @@
-const fs = require("fs");
-const path = require("path");
+const User = require("../models/User");
 
-const usersDir = path.join(__dirname, "../data/users");
-
-// Ensure users folder exists
-if (!fs.existsSync(usersDir)) {
-  fs.mkdirSync(usersDir, { recursive: true });
-}
-
-function getUserData(chatId) {
+async function getUserData(chatId) {
   try {
-    const filePath = path.join(usersDir, `${chatId}.json`);
+    const user = await User.findOne({ chatId });
 
-    if (!fs.existsSync(filePath)) {
+    if (!user) {
       return null;
     }
 
-    const user = JSON.parse(fs.readFileSync(filePath, "utf8"));
     let updated = false;
 
     // Auto-repair old users
@@ -30,34 +21,53 @@ function getUserData(chatId) {
       };
       updated = true;
     } else {
-      if (!user.memory.firstMeet) {
+      if (typeof user.memory.firstMeet !== "string") {
         user.memory.firstMeet = "";
         updated = true;
       }
-      if (!user.memory.firstChat) {
+      if (typeof user.memory.firstChat !== "string") {
         user.memory.firstChat = "";
         updated = true;
       }
-      if (!user.memory.specialMoment) {
+      if (typeof user.memory.specialMoment !== "string") {
         user.memory.specialMoment = "";
         updated = true;
       }
-      if (!user.memory.photoUrl) {
+      if (typeof user.memory.photoUrl !== "string") {
         user.memory.photoUrl = "";
         updated = true;
       }
-      if (!user.memory.gifUrl) {
+      if (typeof user.memory.gifUrl !== "string") {
         user.memory.gifUrl = "";
         updated = true;
       }
     }
+
     if (!Array.isArray(user.timeline)) {
       user.timeline = [];
       updated = true;
     }
 
+    if (!user.profile) {
+      user.profile = {
+        name: "",
+        dob: "",
+        age: "",
+        gender: "",
+        phone: "",
+        phoneEncrypted: "",
+        phoneMasked: "",
+      };
+      updated = true;
+    }
+
+    if (typeof user.profileCompleted !== "boolean") {
+      user.profileCompleted = !!user.profileComleted;
+      updated = true;
+    }
+
     if (updated) {
-      fs.writeFileSync(filePath, JSON.stringify(user, null, 2), "utf8");
+      await user.save();
     }
 
     return user;
@@ -65,9 +75,6 @@ function getUserData(chatId) {
     console.error("Error reading user data for chatId:", chatId, error);
     return null;
   }
-  
-
-
 }
 
 module.exports = getUserData;

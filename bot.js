@@ -2,20 +2,26 @@ require("dotenv").config();
 
 const TelegramBot = require("node-telegram-bot-api");
 const config = require("./config/config");
+const connectDB = require("./config/db");
 const sendWithTyping = require("./utils/sendWithTyping");
 
-// Core commands
+// =========================
+// Core Commands
+// =========================
 const startCommand = require("./commands/start");
 const helpCommand = require("./commands/help");
 const resetCommand = require("./commands/reset");
 
-//handlers
+// =========================
+// Profile / Signup
+// =========================
+const signupCommand = require("./commands/signup");
+const profileCommand = require("./commands/profile");
+const editProfile = require("./handlers/editProfile");
 
-// const setupStartHandler = require("./handlers/start");
-// const setupCallbackHandler = require("./handlers/callbacks");
-//  const setupMessageHandler = require("./handlers/messages");
-
-// Love / fun commands
+// =========================
+// Love / Fun Commands
+// =========================
 const loveCommand = require("./commands/love");
 const hugCommand = require("./commands/hug");
 const lovemeterCommand = require("./commands/lovemeter");
@@ -23,107 +29,131 @@ const reasonsCommand = require("./commands/reasons");
 const surpriseCommand = require("./commands/surprise");
 const lovecodeCommand = require("./commands/lovecode");
 
-// Memory / timeline commands
+// =========================
+// Memory / Timeline Commands
+// =========================
 const memoryCommand = require("./commands/memory");
 const setupMemoryCommand = require("./commands/setupmemory");
-
-
 const timelineCommand = require("./commands/timeline");
 const addTimelineCommand = require("./commands/addtimeline");
 
-// Inline button callbacks
+// =========================
+// Inline Button Callbacks
+// =========================
 const menuCallbacks = require("./handlers/menuCallback");
 
-// Intelligence / auto reply
-// const autoReply = require("./intelligence/autoReply");
+// Optional shared state object if needed by callbacks
+const userStates = {};
 
-// Scheduler
-// const dailyMessages = require("./scheduler/dailyMessages");
-const signupCommand = require("./commands/signup");
-const profileCommand = require("./commands/profile");
-const setupeditProfileCommand = require("./handlers/editProfile")
+async function startBot() {
+  try {
+    console.log("❤️ Love Bot is starting...");
 
-// Create bot
-const bot = new TelegramBot(config.token, { polling: true });
+    // =========================
+    // Validate required env vars
+    // =========================
+    if (!config.token) {
+      throw new Error("BOT_TOKEN is missing in config/env");
+    }
 
-console.log("Love Bot Started ❤️");
+    if (!process.env.SECRET_KEY) {
+      throw new Error("SECRET_KEY is missing in environment variables");
+    }
 
-// Debug incoming messages
-bot.on("message", (msg) => {
-  const chatId = msg.chat.id;
-  console.log(
-    "Incoming message from Chat ID:",
-    chatId,
-    "| Text:",
-    msg.text || "[non-text message]",
-  );
-});
+    console.log("BOT_TOKEN exists:", !!config.token);
+    console.log("SECRET_KEY exists:", !!process.env.SECRET_KEY);
+    console.log("MONGODB_URI exists:", !!process.env.MONGODB_URI);
 
-// Global error handlers
-process.on("uncaughtException", (err) => {
-  console.error("Uncaught Exception:", err);
-});
+    // =========================
+    // Connect MongoDB first
+    // =========================
+    await connectDB();
 
-process.on("unhandledRejection", (err) => {
-  console.error("Unhandled Promise Rejection:", err);
-});
+    // =========================
+    // Create Telegram Bot
+    // =========================
+    const bot = new TelegramBot(config.token, { polling: true });
 
-/* =========================
-   REGISTER COMMANDS
-   Load order matters
-========================= */
+    console.log("🤖 Love Bot is online and polling...");
 
-// 1️⃣ Core / registration first
-startCommand(bot, sendWithTyping);
-helpCommand(bot, sendWithTyping);
-resetCommand(bot, sendWithTyping);
+    // =========================
+    // Debug incoming messages
+    // =========================
+    bot.on("message", (msg) => {
+      const chatId = msg.chat.id;
+      console.log(
+        "Incoming message from Chat ID:",
+        chatId,
+        "| Text:",
+        msg.text || "[non-text message]",
+      );
+    });
 
-//Profile
-signupCommand(bot);
-profileCommand(bot, sendWithTyping);
-setupeditProfileCommand(bot, sendWithTyping);
+    // =========================
+    // Global process error handlers
+    // =========================
+    process.on("uncaughtException", (err) => {
+      console.error("❌ Uncaught Exception:", err);
+    });
 
-// 2️⃣ Memory setup flows BEFORE auto reply
+    process.on("unhandledRejection", (err) => {
+      console.error("❌ Unhandled Promise Rejection:", err);
+    });
 
-setupMemoryCommand(bot, sendWithTyping);
+    // =========================
+    // REGISTER COMMANDS
+    // Load order matters
+    // =========================
 
-// 3️⃣ Memory display + timeline
-memoryCommand(bot, sendWithTyping);
-timelineCommand(bot, sendWithTyping);
-addTimelineCommand(bot, sendWithTyping);
+    // 1️⃣ Core / registration first
+    startCommand(bot, sendWithTyping);
+    helpCommand(bot, sendWithTyping);
+    resetCommand(bot, sendWithTyping);
 
-// 4️⃣ Fun / love commands
-loveCommand(bot, sendWithTyping);
-hugCommand(bot, sendWithTyping);
-lovemeterCommand(bot, sendWithTyping);
-reasonsCommand(bot, sendWithTyping);
-surpriseCommand(bot, sendWithTyping);
-lovecodeCommand(bot, sendWithTyping);
+    // 2️⃣ Profile / signup
+    signupCommand(bot);
+    profileCommand(bot, sendWithTyping);
+    editProfile(bot, sendWithTyping);
 
-//handlers
+    // 3️⃣ Memory setup flows BEFORE memory display
+    setupMemoryCommand(bot, sendWithTyping);
 
-//  setupMessageHandler(bot, sendWithTyping);
+    // 4️⃣ Memory display + timeline
+    memoryCommand(bot, sendWithTyping);
+    timelineCommand(bot, sendWithTyping);
+    addTimelineCommand(bot, sendWithTyping);
 
+    // 5️⃣ Fun / love commands
+    loveCommand(bot, sendWithTyping);
+    hugCommand(bot, sendWithTyping);
+    lovemeterCommand(bot, sendWithTyping);
+    reasonsCommand(bot, sendWithTyping);
+    surpriseCommand(bot, sendWithTyping);
+    lovecodeCommand(bot, sendWithTyping);
 
+    // 6️⃣ Inline button callbacks AFTER commands
+    menuCallbacks(bot, sendWithTyping, userStates);
 
-// 5️⃣ Inline button callbacks AFTER commands
-menuCallbacks(bot, sendWithTyping);
+    // =========================
+    // Bot error handlers
+    // =========================
+    bot.on("polling_error", (error) => {
+      console.error("❌ Polling error:", error.message);
 
-// 6️⃣ Auto reply LAST (important)
-// autoReply(bot, sendWithTyping);
+      if (error.code === "ETELEGRAM") {
+        console.log("⚠️ Another bot instance may be running (409 conflict).");
+      }
+    });
 
-// 7️⃣ Scheduler (optional)
-// If you still use static CHAT_ID in .env, this will work only for one user.
-// For public multi-user bots, this should be redesigned later.
-// if (config.chatId) {
-//   dailyMessages(bot, config.chatId);
-// }
+    bot.on("webhook_error", (error) => {
+      console.error("❌ Webhook error:", error.message);
+    });
 
-// Polling error handling
-bot.on("polling_error", (error) => {
-  console.log("Polling error:", error.message);
-
-  if (error.code === "ETELEGRAM") {
-    console.log("Another bot instance may be running (409 conflict).");
+    console.log("✅ All commands and handlers registered successfully");
+  } catch (err) {
+    console.error("❌ Bot startup failed:", err.message);
+    process.exit(1);
   }
-});
+}
+
+startBot();
