@@ -6,12 +6,7 @@ async function connectDB() {
       throw new Error("MONGODB_URI is missing");
     }
 
-      await mongoose.connect(process.env.MONGODB_URI, {
-        autoIndex: true,
-        useNewUrlParser: true,
-        useUnifiedTopology: true,
-      
-    });
+      await mongoose.connect(process.env.MONGODB_URI);
 
     console.log("🍃 MongoDB connected successfully");
   } catch (err) {
