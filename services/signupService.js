@@ -1,4 +1,5 @@
-const User = require("../models/User");
+const path = require("path");
+console.log(path.resolve(__dirname, "../models/user"));
 const signupStep = {};
 
 function isValidDOB(dob) {
