@@ -1,4 +1,4 @@
-const User = require("../models/user");
+const User = require("../models/User");
 
 async function isProfileComplete(chatId) {
   try {
@@ -8,7 +8,7 @@ async function isProfileComplete(chatId) {
       return false;
     }
 
-    if (user.profileComleted === true) {
+    if (user.profileCompleted === true) {
       user.profileCompleted = true;
       await user.save();
       return true;

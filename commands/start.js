@@ -6,11 +6,11 @@ module.exports = function (bot, sendWithTyping) {
     const chatId = msg.chat.id;
 
     try {
-      const result = registerUser(msg);
+      const result = await registerUser(msg);
       const user = result.user || result;
 
       // If profile is completed, show full unlocked menu
-      if (user.profileCompleted) {
+      if (user.profileCompleted === true) {
         await sendMainMenu(bot, chatId, user.firstName || "there");
         return;
       }

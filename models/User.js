@@ -43,8 +43,7 @@ const userSchema = new mongoose.Schema(
 
     // keep both for safety during migration
     profileCompleted: { type: Boolean, default: false },
-    profileComleted: { type: Boolean, default: false }, // legacy typo support
-
+    
     profile: {
       type: profileSchema,
       default: () => ({

@@ -1,4 +1,4 @@
-const User = require("../models/user");
+const User = require("../models/User");
 const { encrypt } = require("./cryptoHelper");
 
 // Ensure users folder exists
