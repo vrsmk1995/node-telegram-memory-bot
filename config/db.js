@@ -6,12 +6,14 @@ async function connectDB() {
       throw new Error("MONGODB_URI is missing");
     }
 
-      await mongoose.connect(process.env.MONGODB_URI);
+    await mongoose.connect(process.env.MONGODB_URI, {
+      dbName: "lovebot",
+    });
 
     console.log("🍃 MongoDB connected successfully");
   } catch (err) {
     console.error("❌ MongoDB connection failed:", err.message);
-    process.exit(1);
+    // process.exit(1); // keep this off until connection works
   }
 }
 
