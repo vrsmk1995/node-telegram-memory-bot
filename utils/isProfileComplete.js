@@ -1,18 +1,20 @@
-const fs = require("fs");
-const path = require("path");
+const User = require("../models/user");
 
-const userDirectory = path.join(__dirname, "../data/users");
-
-function isProfileComplete(chatId) {
+async function isProfileComplete(chatId) {
   try {
-    const filePath = path.join(userDirectory, `${chatId}.json`);
-
-    if (!fs.existsSync(filePath)) {
+    const user = await User.findOne({ chatId });
+    if (!user) {
+      console.error(`isProfileComplete: User with chatId ${chatId} not found`);
       return false;
     }
 
-    const user = JSON.parse(fs.readFileSync(filePath, "utf8"));
-    return user.profileCompleted === true;
+    if (user.profileComleted === true) {
+      user.profileCompleted = true;
+      await user.save();
+      return true;
+    }
+
+    return false;
   } catch (error) {
     console.error("isProfileComplete error:", error);
     return false;

@@ -1,12 +1,5 @@
-const fs = require("fs");
-const path = require("path");
+const User = require("../models/User");
 const { encrypt } = require("./cryptoHelper");
-
-const usersDir = path.join(__dirname, "../data/users");
-
-if (!fs.existsSync(usersDir)) {
-  fs.mkdirSync(usersDir, { recursive: true });
-}
 
 function maskPhone(phone) {
   if (!phone || phone.length < 4) return "****";
@@ -36,59 +29,61 @@ function calculateAge(dob) {
   return age;
 }
 
-function updateProfileData(chatId, field, value) {
-  const filePath = path.join(usersDir, `${chatId}.json`);
+async function updateProfileData(chatId, field, value) {
+  try {
+    const user = await User.findOne({ chatId });
+    if (!user) {
+      console.error(`updateProfileData: User with chatId ${chatId} not found`);
+      return null;
+    }
 
-  if (!fs.existsSync(filePath)) {
-    console.log("updateProfileData: user file not found for", chatId);
+    if (!user.profile) {
+      user.profile = {
+        name: "",
+        dob: "",
+        age: "",
+        gender: "",
+        phoneEncrypted: "",
+        phoneMasked: "",
+      };
+    }
+
+    // Auto-repair old structure
+    if (typeof user.profile.name !== "string") user.profile.name = "";
+    if (typeof user.profile.dob !== "string") user.profile.dob = "";
+    if (typeof user.profile.age !== "string") user.profile.age = "";
+    if (typeof user.profile.gender !== "string") user.profile.gender = "";
+    if (typeof user.profile.phoneEncrypted !== "string")
+      user.profile.phoneEncrypted = "";
+    if (typeof user.profile.phoneMasked !== "string")
+      user.profile.phoneMasked = "";
+
+    // Remove old field if exists
+    if ("phone" in user.profile) {
+      user.profile.phone = "";
+    }
+
+    if (field === "phone") {
+      user.profile.phoneEncrypted = value ? encrypt(value) : "";
+      user.profile.phoneMasked = value ? maskPhone(value) : "";
+    } else if (field === "dob") {
+      user.profile.dob = encrypt(value);
+
+      const age = calculateAge(value);
+      user.profile.age = encrypt(String(age));
+    } else {
+      user.profile[field] = value ? encrypt(value) : "";
+    }
+
+    await user.save();
+
+    console.log(`updateProfileData: ${field} updated for ${chatId}`);
+
+    return user;
+  } catch (err) {
+    console.error("updateProfileData error:", err);
     return null;
   }
-
-  const user = JSON.parse(fs.readFileSync(filePath, "utf8"));
-
-  if (!user.profile) {
-    user.profile = {
-      name: "",
-      dob: "",
-      age: "",
-      gender: "",
-      phoneEncrypted: "",
-      phoneMasked: "",
-    };
-  }
-
-  // Auto-repair old structure
-  if (typeof user.profile.name !== "string") user.profile.name = "";
-  if (typeof user.profile.dob !== "string") user.profile.dob = "";
-  if (typeof user.profile.age !== "string") user.profile.age = "";
-  if (typeof user.profile.gender !== "string") user.profile.gender = "";
-  if (typeof user.profile.phoneEncrypted !== "string")
-    user.profile.phoneEncrypted = "";
-  if (typeof user.profile.phoneMasked !== "string")
-    user.profile.phoneMasked = "";
-
-  // Remove old field if exists
-  if ("phone" in user.profile) {
-    delete user.profile.phone;
-  }
-
-  if (field === "phone") {
-    user.profile.phoneEncrypted = value ? encrypt(value) : "";
-    user.profile.phoneMasked = value ? maskPhone(value) : "";
-  } else if (field === "dob") {
-    user.profile.dob = encrypt(value);
-
-    const age = calculateAge(value);
-    user.profile.age = encrypt(String(age));
-  } else {
-    user.profile[field] = value ? encrypt(value) : "";
-  }
-
-  fs.writeFileSync(filePath, JSON.stringify(user, null, 2), "utf8");
-
-  console.log(`updateProfileData: ${field} updated for ${chatId}`);
-
-  return user;
 }
 
 module.exports = updateProfileData;

@@ -1,48 +1,43 @@
-const fs = require("fs");
-const path = require("path");
+const User = require("../models/user");
 const { encrypt } = require("./cryptoHelper");
 
-const usersDir = path.join(__dirname, "../data/users");
-
 // Ensure users folder exists
-if (!fs.existsSync(usersDir)) {
-  fs.mkdirSync(usersDir, { recursive: true });
-}
 
-function updateUserData(chatId, field, value) {
-  const filePath = path.join(usersDir, `${chatId}.json`);
+async function updateUserData(chatId, field, value) {
+  try {
+    const user = await User.findOne({ chatId });
+    if (!user) {
+      console.error(`updateUserData: User with chatId ${chatId} not found`);
+      return null;
+    }
 
-  if (!fs.existsSync(filePath)) {
-    console.log("updateUserData: user file not found for", chatId);
+    // Ensure memory exists
+    if (!user.memory) {
+      user.memory = {
+        firstMeet: "",
+        firstChat: "",
+        specialMoment: "",
+        photoUrl: "",
+        gifUrl: "",
+      };
+    }
+
+    const encryptedFields = ["firstMeet", "firstChat", "specialMoment"];
+
+    if (encryptedFields.includes(field)) {
+      user.memory[field] = value ? encrypt(value) : "";
+    } else {
+      user.memory[field] = value || "";
+    }
+
+    await user.save();
+    console.log(`updateUserData: ${field} updated for ${chatId} => ${value}`);
+
+    return user;
+  } catch (err) {
+    console.error("updateUserData error:", err);
     return null;
   }
-
-  const user = JSON.parse(fs.readFileSync(filePath, "utf8"));
-
-  // Ensure memory exists
-  if (!user.memory) {
-    user.memory = {
-      firstMeet: "Not set",
-      firstChat: "Not set",
-      specialMoment: "Not set",
-      photoUrl: "",
-      gifUrl: "",
-    };
-  }
-
-  const encryptedFields = ["firstMeet", "firstChat", "specialMoment"];
-
-  if (encryptedFields.includes(field)) {
-    user.memory[field] = encrypt(value);
-  } else {
-    user.memory[field] = value;
-  }
-
-  fs.writeFileSync(filePath, JSON.stringify(user, null, 2), "utf8");
-
-  console.log(`updateUserData: ${field} updated for ${chatId} => ${value}`);
-
-  return user;
 }
 
 module.exports = updateUserData;

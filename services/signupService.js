@@ -1,6 +1,4 @@
-const fs = require("fs");
-const path = require("path");
-
+const User = require("../models/user");
 const signupStep = {};
 
 function isValidDOB(dob) {
@@ -17,18 +15,19 @@ function isValidDOB(dob) {
   );
 }
 
-function completeSignup(chatId) {
+async function completeSignup(chatId) {
   try {
-    const filePath = path.join(__dirname, "../data/users", `${chatId}.json`);
-
-    if (!fs.existsSync(filePath)) return null;
-
-    const user = JSON.parse(fs.readFileSync(filePath, "utf8"));
+    const user = await User.findOne({ chatId });
+    if (!user) {
+      console.error(`completeSignup: User with chatId ${chatId} not found`);
+      return null;
+    }
     user.profileCompleted = true;
 
     fs.writeFileSync(filePath, JSON.stringify(user, null, 2), "utf8");
 
     delete signupStep[chatId];
+    console.log(`completeSignup: Profile completed for ${chatId}`);
 
     return user;
   } catch (error) {
@@ -37,22 +36,27 @@ function completeSignup(chatId) {
   }
 }
 
+async function startSignupFlow(bot, chatId) {
+  try {
+    const user = await User.findOne({ chatId });
+    if (!user) {
+      console.error(`startSignupFlow: User with chatId ${chatId} not found`);
+      bot.sendMessage(
+        chatId,
+        "An error occurred while starting the signup process. Please try again later.",
+      );
+      return;
+    }
 
-function startSignupFlow(bot, chatId) {
-  try{
-  const filePath = path.join(__dirname, "../data/users", `${chatId}.json`);
+    signupStep[chatId] = { step: 1 };
 
-  if (!fs.existsSync(filePath)) {
-    bot.sendMessage(chatId, "Please use /start first ❤️");
-    return;
-  }
-
-  signupStep[chatId] = { step: 1 };
-
-  bot.sendMessage(chatId, "❤️ Welcome to signup!\n\nPlease enter your name:");
+    bot.sendMessage(chatId, "❤️ Welcome to signup!\n\nPlease enter your name:");
   } catch (error) {
     console.error("Error starting signup flow for chatId:", chatId, error);
-    bot.sendMessage(chatId, "An error occurred while starting the signup process. Please try again later.");
+    bot.sendMessage(
+      chatId,
+      "An error occurred while starting the signup process. Please try again later.",
+    );
   }
 }
 

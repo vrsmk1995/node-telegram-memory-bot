@@ -1,8 +1,5 @@
-const fs = require("fs");
-const path = require("path");
+const User = require("../models/user");
 const { decrypt } = require("./cryptoHelper");
-
-const usersDir = path.join(__dirname, "../data/users");
 
 function calculateAge(dobString) {
   if (!dobString) return "Not set";
@@ -24,14 +21,13 @@ function calculateAge(dobString) {
   return age;
 }
 
-function getProfileData(chatId) {
+async function getProfileData(chatId) {
   try {
-    const filePath = path.join(usersDir, `${chatId}.json`);
-
-    if (!fs.existsSync(filePath)) return null;
-
-    const user = JSON.parse(fs.readFileSync(filePath, "utf8"));
-
+    const user = await User.findOne({ chatId });
+    if (!user) {
+      console.error(`getProfileData: User with chatId ${chatId} not found`);
+      return null;
+    }
     if (!user.profile) return null;
 
     const name = user.profile.name ? decrypt(user.profile.name) : "Not set";
