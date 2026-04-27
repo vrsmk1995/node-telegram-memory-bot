@@ -1,9 +1,8 @@
-const fs = require("fs");
-const path = require("path");
+const User = require("../models/User");
 const requireSignup = require("../utils/requireSignUp");
 
 module.exports = function (bot) {
-  bot.onText(/\/addtimeline (.+)/, (msg, match) => {
+  bot.onText(/\/addtimeline (.+)/, async (msg, match) => {
     const chatId = msg.chat.id;
     if (!requireSignup(bot, chatId)) return;
 
@@ -13,26 +12,43 @@ module.exports = function (bot) {
 
     const event = args.slice(1).join(" ");
 
-    const filePath = path.join(__dirname, "../data/users", `${chatId}.json`);
+    try {
+      const user = await User.findOne({ chatId });
 
-    if (!fs.existsSync(filePath)) {
-      bot.sendMessage(chatId, "Run /start first.");
-      return;
+      if (!user) {
+        bot.sendMessage(chatId, "User not found. Please sign up first.");
+        return;
+      }
+
+      const yearNum = parseInt(year);
+      if (isNaN(yearNum)) {
+        bot.sendMessage(chatId, "Invalid year. Please provide a valid year.");
+        return;
+      }
+
+      if (!event.trim()) {
+        bot.sendMessage(chatId, "Please provide an event description.");
+        return;
+      }
+
+      if (!user.timeline) {
+        user.timeline = [];
+      }
+
+      user.timeline.push({
+        year: yearNum,
+        event,
+      });
+
+      await user.save();
+
+      bot.sendMessage(chatId, `Timeline event added for ${yearNum} ❤️`);
+    } catch (error) {
+      console.error("Error adding timeline event:", error);
+      await bot.sendMessage(
+        chatId,
+        "An error occurred while adding the timeline event. Please try again later ❤️",
+      );
     }
-
-    const user = JSON.parse(fs.readFileSync(filePath));
-
-    if (!user.timeline) {
-      user.timeline = [];
-    }
-
-    user.timeline.push({
-      year,
-      event,
-    });
-
-    fs.writeFileSync(filePath, JSON.stringify(user, null, 2));
-
-    bot.sendMessage(chatId, `Timeline event added for ${year} ❤️`);
   });
 };

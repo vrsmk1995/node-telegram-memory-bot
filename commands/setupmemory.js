@@ -9,25 +9,30 @@ function setupmemoryHandler(bot) {
   bot.onText(/\/setupmemory/i, async (msg) => {
     const chatId = msg.chat.id;
 
-    if (!requireSignup(bot, chatId)) return;
+    try {
+      if (!(await requireSignup(bot, chatId))) return;
 
-    // Clear conflicting flows
-    clearSignupStep(chatId);
+      // Clear conflicting flows
+      clearSignupStep(chatId);
 
-    if (editProfileStep[chatId]) {
-      delete editProfileStep[chatId];
+      if (editProfileStep[chatId]) {
+        delete editProfileStep[chatId];
+      }
+
+      // Reset any old memory flow before starting fresh
+      delete setupStep[chatId];
+      setupStep[chatId] = { step: 1 };
+
+      console.log("SetupMemory started for", chatId);
+
+      await bot.sendMessage(
+        chatId,
+        "❤️ Let's set up your full memory journey!\n\nWhen did you first meet?",
+      );
+    } catch (err) {
+      console.error("SetupMemory start error:", err);
+      await bot.sendMessage(chatId, "Failed to start memory setup.");
     }
-
-    // Reset any old memory flow before starting fresh
-    delete setupStep[chatId];
-    setupStep[chatId] = { step: 1 };
-
-    console.log("SetupMemory started for", chatId);
-
-    await bot.sendMessage(
-      chatId,
-      "❤️ Let's set up your full memory journey!\n\nWhen did you first meet?",
-    );
   });
 
   // Handle text steps
@@ -53,7 +58,7 @@ function setupmemoryHandler(bot) {
     try {
       // Step 1: first meet
       if (current.step === 1) {
-        updateUserData(chatId, "firstMeet", text);
+        await updateUserData(chatId, "firstMeet", text);
         current.step = 2;
 
         await bot.sendMessage(chatId, "💬 Nice! When did you first chat?");
@@ -62,7 +67,7 @@ function setupmemoryHandler(bot) {
 
       // Step 2: first chat
       else if (current.step === 2) {
-        updateUserData(chatId, "firstChat", text);
+        await updateUserData(chatId, "firstChat", text);
         current.step = 3;
 
         await bot.sendMessage(
@@ -74,7 +79,7 @@ function setupmemoryHandler(bot) {
 
       // Step 3: special moment
       else if (current.step === 3) {
-        updateUserData(chatId, "specialMoment", text);
+        await updateUserData(chatId, "specialMoment", text);
         current.step = 4;
 
         await bot.sendMessage(
@@ -88,7 +93,7 @@ function setupmemoryHandler(bot) {
       // Step 4: photo skip only if user typed Skip
       else if (current.step === 4) {
         if (text.toLowerCase() === "skip") {
-          updateUserData(chatId, "photoUrl", "");
+          await updateUserData(chatId, "photoUrl", "");
           current.step = 5;
 
           await bot.sendMessage(
@@ -110,7 +115,7 @@ function setupmemoryHandler(bot) {
       // Step 5: gif skip only if user typed Skip
       else if (current.step === 5) {
         if (text.toLowerCase() === "skip") {
-          updateUserData(chatId, "gifUrl", "");
+          await updateUserData(chatId, "gifUrl", "");
           delete setupStep[chatId];
 
           await bot.sendMessage(
@@ -147,7 +152,7 @@ function setupmemoryHandler(bot) {
       const photo = msg.photo[msg.photo.length - 1];
       const fileId = photo.file_id;
 
-      updateUserData(chatId, "photoUrl", fileId);
+      await updateUserData(chatId, "photoUrl", fileId);
       setupStep[chatId].step = 5;
 
       console.log("SetupMemory PHOTO saved for", chatId, "| fileId:", fileId);
@@ -176,7 +181,7 @@ function setupmemoryHandler(bot) {
     try {
       const fileId = msg.animation.file_id;
 
-      updateUserData(chatId, "gifUrl", fileId);
+      await updateUserData(chatId, "gifUrl", fileId);
 
       console.log("SetupMemory GIF saved for", chatId, "| fileId:", fileId);
 

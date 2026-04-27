@@ -1,44 +1,43 @@
-const fs = require("fs");
-const path = require("path");
 const getProfileData = require("../utils/getProfileData");
-const requireSignup = require("../utils/requireSignUp");
+const isProfileComplete = require("../utils/isProfileComplete");
 
 module.exports = function (bot, sendWithTyping) {
   bot.onText(/\/profile/i, async (msg) => {
     const chatId = msg.chat.id;
-    if (!requireSignup(bot, chatId)) return;
-    const filePath = path.join(__dirname, "../data/users", `${chatId}.json`);
 
-    if (!fs.existsSync(filePath)) {
-      bot.sendMessage(chatId, "Please use /start first ❤️");
-      return;
-    }
+    try {
+      const profileDone = await isProfileComplete(chatId);
 
-    const user = JSON.parse(fs.readFileSync(filePath, "utf8"));
+      if (!profileDone) {
+        await bot.sendMessage(
+          chatId,
+          "Your profile is not completed yet ❤️\n\nPlease use /signup first.",
+        );
+        return;
+      }
 
-    if (!user.profileCompleted) {
-      bot.sendMessage(
-        chatId,
-        "Your profile is not completed yet ❤️\n\nPlease use /signup first.",
-      );
-      return;
-    }
+      const profile = await getProfileData(chatId);
 
-    const profile = getProfileData(chatId);
+      if (!profile) {
+        await bot.sendMessage(
+          chatId,
+          "Profile not found. Please use /start first ❤️",
+        );
+        return;
+      }
 
-    const message = `👤 Your Profile ❤️
+      const message = `👤 Your Profile ❤️
 
 Name: ${profile.name}
 Date of Birth: ${profile.dob}
 Age: ${profile.age}
 Gender: ${profile.gender}
-Phone:${profile.phoneMasked}`;
+Phone: ${profile.phoneMasked || "Not provided"}`;
 
-    try {
-      await sendWithTyping(bot, chatId, message, 1500);
+      await sendWithTyping(bot, chatId, message, 1200);
     } catch (err) {
-      console.error("Profile display error:", err);
-      bot.sendMessage(chatId, "Failed to load your profile.");
+      console.error("Profile command error:", err);
+      await bot.sendMessage(chatId, "Failed to load your profile.");
     }
   });
 };

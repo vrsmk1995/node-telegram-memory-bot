@@ -1,5 +1,4 @@
-const path = require("path");
-console.log(path.resolve(__dirname, "../models/user"));
+const User = require("../models/User");
 const signupStep = {};
 
 function isValidDOB(dob) {
@@ -25,7 +24,7 @@ async function completeSignup(chatId) {
     }
     user.profileCompleted = true;
 
-    fs.writeFileSync(filePath, JSON.stringify(user, null, 2), "utf8");
+    await user.save();
 
     delete signupStep[chatId];
     console.log(`completeSignup: Profile completed for ${chatId}`);
@@ -41,20 +40,22 @@ async function startSignupFlow(bot, chatId) {
   try {
     const user = await User.findOne({ chatId });
     if (!user) {
-      console.error(`startSignupFlow: User with chatId ${chatId} not found`);
-      bot.sendMessage(
+      await bot.sendMessage(
         chatId,
-        "An error occurred while starting the signup process. Please try again later.",
+        "Welcome! Let's start the signup process using /start first.",
       );
       return;
     }
 
     signupStep[chatId] = { step: 1 };
 
-    bot.sendMessage(chatId, "❤️ Welcome to signup!\n\nPlease enter your name:");
+    await bot.sendMessage(
+      chatId,
+      "❤️ Welcome to signup!\n\nPlease enter your name:",
+    );
   } catch (error) {
     console.error("Error starting signup flow for chatId:", chatId, error);
-    bot.sendMessage(
+    await bot.sendMessage(
       chatId,
       "An error occurred while starting the signup process. Please try again later.",
     );

@@ -1,5 +1,4 @@
-const fs = require("fs");
-const path = require("path");
+const User = require("../models/User");
 const getUserData = require("../utils/getUserData");
 const getProfileData = require("../utils/getProfileData");
 const { decrypt } = require("../utils/cryptoHelper");
@@ -30,7 +29,7 @@ const publicActions = [
   "confirm_reset_yes",
   "confirm_reset_no",
 
-  // Edit profile actions should be accessible after signup menu
+  // Edit profile actions
   "edit_profile",
   "edit_name",
   "edit_dob",
@@ -45,8 +44,8 @@ module.exports = function (bot, sendWithTyping, userStates = {}) {
     const data = query.data;
 
     try {
-      // Block protected buttons before signup (popup only, no chat spam)
-      if (!publicActions.includes(data) && !isProfileComplete(chatId)) {
+      // Block protected buttons before signup
+      if (!publicActions.includes(data) && !(await isProfileComplete(chatId))) {
         await bot.answerCallbackQuery(query.id, {
           text: "Please complete signup first ❤️",
           show_alert: false,
@@ -60,20 +59,14 @@ module.exports = function (bot, sendWithTyping, userStates = {}) {
         // =========================
 
         case "signup": {
-          const filePath = path.join(
-            __dirname,
-            "../data/users",
-            `${chatId}.json`,
-          );
+          const user = await User.findOne({ chatId });
 
-          if (!fs.existsSync(filePath)) {
+          if (!user) {
             await bot.sendMessage(chatId, "Please use /start first ❤️");
             break;
           }
 
-          const user = JSON.parse(fs.readFileSync(filePath, "utf8"));
-
-          if (user.profileCompleted) {
+          if (user.profileCompleted === true || user.profileComleted === true) {
             await bot.sendMessage(
               chatId,
               "✅ Your profile is already completed ❤️",
@@ -92,36 +85,15 @@ module.exports = function (bot, sendWithTyping, userStates = {}) {
             delete editProfileStep[chatId];
           }
 
-          startSignupFlow(bot, chatId);
+          await startSignupFlow(bot, chatId);
           break;
         }
 
         case "profile": {
-          const filePath = path.join(
-            __dirname,
-            "../data/users",
-            `${chatId}.json`,
-          );
-
-          if (!fs.existsSync(filePath)) {
-            await bot.sendMessage(chatId, "Please use /start first ❤️");
-            break;
-          }
-
-          const user = JSON.parse(fs.readFileSync(filePath, "utf8"));
-
-          if (!user.profileCompleted) {
-            await bot.sendMessage(
-              chatId,
-              "Your profile is not completed yet ❤️\n\nPlease use /signup first.",
-            );
-            break;
-          }
-
-          const profile = getProfileData(chatId);
+          const profile = await getProfileData(chatId);
 
           if (!profile) {
-            await bot.sendMessage(chatId, "❌ Could not load your profile.");
+            await bot.sendMessage(chatId, "Please use /start first ❤️");
             break;
           }
 
@@ -138,7 +110,6 @@ Phone: ${profile.phoneMasked || "Not provided"}`;
         }
 
         case "edit_profile": {
-          // Clear conflicting flows
           clearSignupStep(chatId);
 
           if (setupStep[chatId]) {
@@ -153,9 +124,10 @@ Phone: ${profile.phoneMasked || "Not provided"}`;
           if (setupStep[chatId]) {
             delete setupStep[chatId];
           }
-          clearSignupStep(chatId);
 
+          clearSignupStep(chatId);
           editProfileStep[chatId] = { field: "name" };
+
           await bot.sendMessage(chatId, "✏️ Please enter your new name:");
           break;
         }
@@ -164,9 +136,10 @@ Phone: ${profile.phoneMasked || "Not provided"}`;
           if (setupStep[chatId]) {
             delete setupStep[chatId];
           }
-          clearSignupStep(chatId);
 
+          clearSignupStep(chatId);
           editProfileStep[chatId] = { field: "dob" };
+
           await bot.sendMessage(
             chatId,
             "📅 Please enter your new date of birth in DD-MM-YYYY format.\n\nExample: 14-08-1995",
@@ -178,9 +151,10 @@ Phone: ${profile.phoneMasked || "Not provided"}`;
           if (setupStep[chatId]) {
             delete setupStep[chatId];
           }
-          clearSignupStep(chatId);
 
+          clearSignupStep(chatId);
           editProfileStep[chatId] = { field: "gender" };
+
           await bot.sendMessage(
             chatId,
             "⚧️ Please enter your gender:\n\nMale / Female / Other",
@@ -192,9 +166,10 @@ Phone: ${profile.phoneMasked || "Not provided"}`;
           if (setupStep[chatId]) {
             delete setupStep[chatId];
           }
-          clearSignupStep(chatId);
 
+          clearSignupStep(chatId);
           editProfileStep[chatId] = { field: "phone" };
+
           await bot.sendMessage(
             chatId,
             "📱 Update your phone number:\n\n• Share your phone using the button below\n• OR type a valid 10-digit number\n• OR type Skip to remove/skip phone",
@@ -226,7 +201,9 @@ Phone: ${profile.phoneMasked || "Not provided"}`;
         }
 
         case "help": {
-          const helpText = isProfileComplete(chatId)
+          const profileDone = await isProfileComplete(chatId);
+
+          const helpText = profileDone
             ? `✨ Love Bot Help ✨
 
 Available Commands:
@@ -264,7 +241,6 @@ Complete /signup first to unlock all Love Bot features ❤️`;
         }
 
         case "reset": {
-          // Clear edit flow if active
           if (editProfileStep[chatId]) {
             delete editProfileStep[chatId];
           }
@@ -298,7 +274,6 @@ Complete /signup first to unlock all Love Bot features ❤️`;
         // =========================
 
         case "setupmemory": {
-          // Clear conflicting flows
           clearSignupStep(chatId);
 
           if (editProfileStep[chatId]) {
@@ -347,7 +322,7 @@ Complete /signup first to unlock all Love Bot features ❤️`;
         }
 
         case "memory": {
-          const user = getUserData(chatId);
+          const user = await getUserData(chatId);
 
           if (!user || !user.memory) {
             await bot.sendMessage(
@@ -369,10 +344,15 @@ Complete /signup first to unlock all Love Bot features ❤️`;
             ? decrypt(memory.specialMoment)
             : "Not set";
 
+          const hasPhoto = !!memory.photoUrl;
+          const hasGif = !!memory.gifUrl;
+
           if (
             firstMeet === "Not set" &&
             firstChat === "Not set" &&
-            specialMoment === "Not set"
+            specialMoment === "Not set" &&
+            !hasPhoto &&
+            !hasGif
           ) {
             await bot.sendMessage(
               chatId,
@@ -456,7 +436,6 @@ Special Moment: ${specialMoment}`;
         }
       }
 
-      // Always close callback spinner once
       await bot.answerCallbackQuery(query.id);
     } catch (err) {
       console.error("Inline button error:", err);
