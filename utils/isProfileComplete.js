@@ -3,14 +3,19 @@ const User = require("../models/User");
 async function isProfileComplete(chatId) {
   try {
     const user = await User.findOne({ chatId });
+
     if (!user) {
-      console.error(`isProfileComplete: User with chatId ${chatId} not found`);
       return false;
     }
 
-    if (user.profileCompleted === true) {
-      user.profileCompleted = true;
-      await user.save();
+    // Support legacy typo field during migration
+    if (user.profileCompleted === true || user.profileComleted === true) {
+      // Auto-heal old users
+      if (user.profileCompleted !== true) {
+        user.profileCompleted = true;
+        await user.save();
+      }
+
       return true;
     }
 

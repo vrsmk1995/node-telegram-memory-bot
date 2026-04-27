@@ -1,23 +1,53 @@
+const isProfileComplete = require("../utils/isProfileComplete");
+
 module.exports = function (bot) {
-  bot.onText(/\/help/, (msg) => {
+  bot.onText(/\/help/i, async (msg) => {
     const chatId = msg.chat.id;
 
-    const helpMessage = `✨ Available Commands ✨
+    try {
+      const profileDone = await isProfileComplete(chatId);
 
-/start - Register and create your profile
+      const helpMessage = profileDone
+        ? `✨ *Love Bot Help* ✨
+
+*Available Commands:*
+/start - Open the welcome menu
 /help - Show all available commands
-/memory - View your saved memory
-/setupmemory - Setup your memory details
+/profile - View your saved profile
+/editprofile - Update your profile details
+/setupmemory - Save or update your memories
+/memory - View your saved memories
+/addtimeline - Add a timeline memory
+/timeline - View your timeline memories
+/reset - Reset memories or full profile
 
-/reset - Reset your profile and start fresh
-/love - Get a sweet love message ❤️
+💡 *Suggested Flow:*
+1. /profile
+2. /editprofile (if needed)
+3. /setupmemory
+4. /memory
+5. /addtimeline Title | Date | Note
+6. /timeline`
+        : `✨ *Love Bot Help* ✨
 
-💡 Suggested Flow:
-1. /start
-2. /setupmemory
-3. /memory
-4. /timeline`;
+*Available Commands Before Signup:*
+/start - Open the welcome menu
+/help - Show available commands
+/signup - Complete your profile setup
+/reset - Reset your data if needed
 
-    bot.sendMessage(chatId, helpMessage);
+⚠️ *Important:*
+Complete /signup first to unlock profile, memory, and timeline features ❤️`;
+
+      await bot.sendMessage(chatId, helpMessage, {
+        parse_mode: "Markdown",
+      });
+    } catch (error) {
+      console.error("Help command error:", error);
+      await bot.sendMessage(
+        chatId,
+        "❌ Failed to load help menu. Please try again.",
+      );
+    }
   });
 };

@@ -62,6 +62,7 @@ async function getUserData(chatId) {
     }
 
     if (typeof user.profileCompleted !== "boolean") {
+      user.profileCompleted = false;
       updated = true;
     }
 

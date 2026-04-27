@@ -5,11 +5,13 @@ async function sendMainMenu(bot, chatId, firstName = "there") {
 
 ✨ Love Bot Features Unlocked ✨
 
-1️⃣ Use /setupmemory to save or update your memories
-2️⃣ Use /memory to replay your saved memories
-3️⃣ Try fun features like /love, /surprise, /reasons, /lovecode
-4️⃣ Use /profile to view your profile
-5️⃣ Use the menu buttons below for quick access ✨`;
+1️⃣ Use /profile to view your saved profile
+2️⃣ Use /editprofile to update your details anytime
+3️⃣ Use /setupmemory to save or update your memories
+4️⃣ Use /memory to replay your saved memories
+5️⃣ Use /addtimeline to save timeline memories
+6️⃣ Use /timeline to view your memory timeline
+7️⃣ Use the menu buttons below for quick access ✨`;
 
   const buttons = [
     [
@@ -17,13 +19,12 @@ async function sendMainMenu(bot, chatId, firstName = "there") {
       { text: "✏️ Edit Profile", callback_data: "edit_profile" },
     ],
     [
-      { text: "❤️ Love", callback_data: "love" },
-      { text: "🎁 Surprise", callback_data: "surprise" },
       { text: "🧠 Memory", callback_data: "memory" },
+      { text: "📝 Setup Memory", callback_data: "setup_memory" },
     ],
     [
-      { text: "💌 Reasons", callback_data: "reasons" },
-      { text: "🔢 Love Code", callback_data: "lovecode" },
+      { text: "📅 Timeline", callback_data: "timeline" },
+      { text: "➕ Add Timeline", callback_data: "add_timeline_help" },
     ],
     [
       { text: "❓ Help", callback_data: "help" },

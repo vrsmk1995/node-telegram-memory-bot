@@ -2,52 +2,64 @@ const User = require("../models/User");
 const requireSignup = require("../utils/requireSignUp");
 
 module.exports = function (bot) {
-  bot.onText(/\/addtimeline (.+)/, async (msg, match) => {
+  bot.onText(/\/addtimeline\s+(.+)/i, async (msg, match) => {
     const chatId = msg.chat.id;
-    if (!requireSignup(bot, chatId)) return;
 
-    const args = match[1].split(" ");
-
-    const year = args[0];
-
-    const event = args.slice(1).join(" ");
+    if (!(await requireSignup(bot, chatId))) return;
 
     try {
       const user = await User.findOne({ chatId });
 
       if (!user) {
-        bot.sendMessage(chatId, "User not found. Please sign up first.");
+        await bot.sendMessage(chatId, "Please use /start first ❤️");
         return;
       }
 
-      const yearNum = parseInt(year);
-      if (isNaN(yearNum)) {
-        bot.sendMessage(chatId, "Invalid year. Please provide a valid year.");
+      const input = match[1].trim();
+
+      // Format: /addtimeline Title | Date | Note
+      const parts = input.split("|").map((part) => part.trim());
+
+      if (parts.length < 3) {
+        await bot.sendMessage(
+          chatId,
+          "⚠️ Invalid format.\n\nUse:\n/addtimeline Title | Date | Note\n\nExample:\n/addtimeline First Meet | 14-02-2024 | We met for the first time ❤️",
+        );
         return;
       }
 
-      if (!event.trim()) {
-        bot.sendMessage(chatId, "Please provide an event description.");
+      const [title, date, note] = parts;
+
+      if (!title || !date || !note) {
+        await bot.sendMessage(
+          chatId,
+          "⚠️ Please provide all 3 values.\n\nUse:\n/addtimeline Title | Date | Note",
+        );
         return;
       }
 
-      if (!user.timeline) {
+      if (!Array.isArray(user.timeline)) {
         user.timeline = [];
       }
 
       user.timeline.push({
-        year: yearNum,
-        event,
+        title,
+        date,
+        note,
+        createdAt: new Date(),
       });
 
       await user.save();
 
-      bot.sendMessage(chatId, `Timeline event added for ${yearNum} ❤️`);
+      await bot.sendMessage(
+        chatId,
+        `✅ Timeline memory added successfully ❤️\n\n📌 ${title}\n📆 ${date}\n📝 ${note}`,
+      );
     } catch (error) {
       console.error("Error adding timeline event:", error);
       await bot.sendMessage(
         chatId,
-        "An error occurred while adding the timeline event. Please try again later ❤️",
+        "❌ An error occurred while adding the timeline memory. Please try again later ❤️",
       );
     }
   });

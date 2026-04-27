@@ -97,7 +97,7 @@ module.exports = function (bot) {
 
         await bot.sendMessage(
           chatId,
-          "⚧️ Please enter your gender:\n\nMale / Feale / Other\n\nOr type: Skip",
+          "⚧️ Please enter your gender:\n\nMale / Female / Other\n\nOr type: Skip",
         );
         return;
       }

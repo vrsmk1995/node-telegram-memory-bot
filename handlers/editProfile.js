@@ -42,7 +42,10 @@ async function showEditProfileMenu(bot, chatId) {
     delete setupStep[chatId];
   }
 
-  const profile = getProfileData(chatId);
+  // always start clean before showing menu
+  clearEditProfileFlow(chatId);
+
+  const profile = await getProfileData(chatId);
 
   if (!profile) {
     await bot.sendMessage(chatId, "❌ Could not load your profile.");
@@ -54,10 +57,10 @@ async function showEditProfileMenu(bot, chatId) {
     `✏️ *Edit Profile*
 
 Current Details:
-• Name: ${profile.name}
-• DOB: ${profile.dob}
-• Age: ${profile.age}
-• Gender: ${profile.gender}
+• Name: ${profile.name || "Not set"}
+• DOB: ${profile.dob || "Not set"}
+• Age: ${profile.age || "Not set"}
+• Gender: ${profile.gender || "Not set"}
 • Phone: ${profile.phoneMasked || "Not provided"}
 
 Choose what you want to update:`,
@@ -83,24 +86,29 @@ function editProfileHandler(bot, sendWithTyping) {
   bot.onText(/\/editprofile/i, async (msg) => {
     const chatId = msg.chat.id;
 
-    if (!isProfileComplete(chatId)) {
-      await bot.sendMessage(
-        chatId,
-        "⚠️ Please complete signup first using /signup ❤️",
-      );
-      return;
+    try {
+      if (!(await isProfileComplete(chatId))) {
+        await bot.sendMessage(
+          chatId,
+          "⚠️ Please complete signup first using /signup ❤️",
+        );
+        return;
+      }
+
+      // Clear conflicting flows before opening edit menu
+      clearSignupStep(chatId);
+
+      if (setupStep[chatId]) {
+        delete setupStep[chatId];
+      }
+
+      clearEditProfileFlow(chatId);
+
+      await showEditProfileMenu(bot, chatId);
+    } catch (err) {
+      console.error("Edit profile command error:", err);
+      await bot.sendMessage(chatId, "❌ Failed to open edit profile menu.");
     }
-
-    // Clear conflicting flows before opening edit menu
-    clearSignupStep(chatId);
-
-    if (setupStep[chatId]) {
-      delete setupStep[chatId];
-    }
-
-    clearEditProfileFlow(chatId);
-
-    await showEditProfileMenu(bot, chatId);
   });
 
   // =========================
@@ -125,6 +133,11 @@ function editProfileHandler(bot, sendWithTyping) {
       current = editProfileStep[chatId];
     }
 
+    // IMPORTANT: if menu state accidentally set, ignore text (don't reset flow)
+    if (!current || !current.field) {
+      return;
+    }
+
     try {
       switch (current.field) {
         case "name": {
@@ -136,7 +149,7 @@ function editProfileHandler(bot, sendWithTyping) {
             return;
           }
 
-          updateProfileData(chatId, "name", text);
+          await updateProfileData(chatId, "name", text);
 
           clearEditProfileFlow(chatId);
 
@@ -147,8 +160,16 @@ function editProfileHandler(bot, sendWithTyping) {
             900,
           );
 
-          const user = getUserData(chatId);
-          await sendMainMenu(bot, chatId, user?.firstName || "there");
+          const user = await getUserData(chatId);
+
+          // prefer updated profile name for welcome
+          const profile = await getProfileData(chatId);
+
+          await sendMainMenu(
+            bot,
+            chatId,
+            profile?.name || user?.firstName || "there",
+          );
           return;
         }
 
@@ -161,7 +182,7 @@ function editProfileHandler(bot, sendWithTyping) {
             return;
           }
 
-          updateProfileData(chatId, "dob", text);
+          await updateProfileData(chatId, "dob", text);
 
           clearEditProfileFlow(chatId);
 
@@ -172,8 +193,14 @@ function editProfileHandler(bot, sendWithTyping) {
             900,
           );
 
-          const user = getUserData(chatId);
-          await sendMainMenu(bot, chatId, user?.firstName || "there");
+          const user = await getUserData(chatId);
+          const profile = await getProfileData(chatId);
+
+          await sendMainMenu(
+            bot,
+            chatId,
+            profile?.name || user?.firstName || "there",
+          );
           return;
         }
 
@@ -188,7 +215,7 @@ function editProfileHandler(bot, sendWithTyping) {
             return;
           }
 
-          updateProfileData(chatId, "gender", formatGender(text));
+          await updateProfileData(chatId, "gender", formatGender(text));
 
           clearEditProfileFlow(chatId);
 
@@ -199,14 +226,20 @@ function editProfileHandler(bot, sendWithTyping) {
             900,
           );
 
-          const user = getUserData(chatId);
-          await sendMainMenu(bot, chatId, user?.firstName || "there");
+          const user = await getUserData(chatId);
+          const profile = await getProfileData(chatId);
+
+          await sendMainMenu(
+            bot,
+            chatId,
+            profile?.name || user?.firstName || "there",
+          );
           return;
         }
 
         case "phone": {
           if (text.toLowerCase() === "skip") {
-            updateProfileData(chatId, "phone", "");
+            await updateProfileData(chatId, "phone", "");
 
             clearEditProfileFlow(chatId);
 
@@ -220,8 +253,14 @@ function editProfileHandler(bot, sendWithTyping) {
               },
             );
 
-            const user = getUserData(chatId);
-            await sendMainMenu(bot, chatId, user?.firstName || "there");
+            const user = await getUserData(chatId);
+            const profile = await getProfileData(chatId);
+
+            await sendMainMenu(
+              bot,
+              chatId,
+              profile?.name || user?.firstName || "there",
+            );
             return;
           }
 
@@ -245,7 +284,7 @@ function editProfileHandler(bot, sendWithTyping) {
             return;
           }
 
-          updateProfileData(chatId, "phone", phone);
+          await updateProfileData(chatId, "phone", phone);
 
           clearEditProfileFlow(chatId);
 
@@ -259,17 +298,22 @@ function editProfileHandler(bot, sendWithTyping) {
             },
           );
 
-          const user = getUserData(chatId);
-          await sendMainMenu(bot, chatId, user?.firstName || "there");
+          const user = await getUserData(chatId);
+          const profile = await getProfileData(chatId);
+
+          await sendMainMenu(
+            bot,
+            chatId,
+            profile?.name || user?.firstName || "there",
+          );
           return;
         }
 
         default: {
-          clearEditProfileFlow(chatId);
-
+          // DON'T reset here aggressively unless actual bad field
           await bot.sendMessage(
             chatId,
-            "⚠️ Edit profile flow reset. Please use /editprofile again.",
+            "⚠️ Please choose an edit option first from /editprofile.",
             {
               reply_markup: {
                 remove_keyboard: true,
@@ -315,7 +359,7 @@ function editProfileHandler(bot, sendWithTyping) {
       current = editProfileStep[chatId];
     }
 
-    if (current.field !== "phone") return;
+    if (!current || current.field !== "phone") return;
 
     try {
       const contact = msg.contact;
@@ -349,7 +393,7 @@ function editProfileHandler(bot, sendWithTyping) {
         return;
       }
 
-      updateProfileData(chatId, "phone", phone);
+      await updateProfileData(chatId, "phone", phone);
 
       clearEditProfileFlow(chatId);
 
@@ -363,8 +407,14 @@ function editProfileHandler(bot, sendWithTyping) {
         },
       );
 
-      const user = getUserData(chatId);
-      await sendMainMenu(bot, chatId, user?.firstName || "there");
+      const user = await getUserData(chatId);
+      const profile = await getProfileData(chatId);
+
+      await sendMainMenu(
+        bot,
+        chatId,
+        profile?.name || user?.firstName || "there",
+      );
     } catch (err) {
       console.error("Edit profile contact error:", err);
 
@@ -381,4 +431,3 @@ function editProfileHandler(bot, sendWithTyping) {
 
 module.exports = editProfileHandler;
 module.exports.showEditProfileMenu = showEditProfileMenu;
-

@@ -3,6 +3,7 @@ const getUserData = require("../utils/getUserData");
 const getProfileData = require("../utils/getProfileData");
 const { decrypt } = require("../utils/cryptoHelper");
 const isProfileComplete = require("../utils/isProfileComplete");
+const sendMainMenu = require("../utils/sendMainMenu");
 const {
   startSignupFlow,
   clearSignupStep,
@@ -10,7 +11,6 @@ const {
 const { showEditProfileMenu } = require("./editProfile");
 const { editProfileStep } = require("../state/editProfileState");
 const { setupStep } = require("../state/setupMemoryState");
-
 const {
   showResetConfirmation,
   showFullResetConfirmation,
@@ -36,6 +36,12 @@ const publicActions = [
   "edit_gender",
   "edit_phone",
   "edit_cancel",
+
+  // Feature buttons
+  "setup_memory",
+  "memory",
+  "timeline",
+  "add_timeline_help",
 ];
 
 module.exports = function (bot, sendWithTyping, userStates = {}) {
@@ -99,10 +105,10 @@ module.exports = function (bot, sendWithTyping, userStates = {}) {
 
           const message = `👤 Your Profile ❤️
 
-Name: ${profile.name}
-Date of Birth: ${profile.dob}
-Age: ${profile.age}
-Gender: ${profile.gender}
+Name: ${profile.name || "Not set"}
+Date of Birth: ${profile.dob || "Not set"}
+Age: ${profile.age || "Not set"}
+Gender: ${profile.gender || "Not set"}
 Phone: ${profile.phoneMasked || "Not provided"}`;
 
           await sendWithTyping(bot, chatId, message, 1200);
@@ -114,6 +120,10 @@ Phone: ${profile.phoneMasked || "Not provided"}`;
 
           if (setupStep[chatId]) {
             delete setupStep[chatId];
+          }
+
+          if (editProfileStep[chatId]) {
+            delete editProfileStep[chatId];
           }
 
           await showEditProfileMenu(bot, chatId);
@@ -197,6 +207,15 @@ Phone: ${profile.phoneMasked || "Not provided"}`;
               remove_keyboard: true,
             },
           });
+
+          const user = await getUserData(chatId);
+          const profile = await getProfileData(chatId);
+
+          await sendMainMenu(
+            bot,
+            chatId,
+            profile?.name || user?.firstName || "there",
+          );
           break;
         }
 
@@ -204,39 +223,40 @@ Phone: ${profile.phoneMasked || "Not provided"}`;
           const profileDone = await isProfileComplete(chatId);
 
           const helpText = profileDone
-            ? `✨ Love Bot Help ✨
+            ? `✨ *Love Bot Help* ✨
 
-Available Commands:
-/start
-/signup
-/profile
-/editprofile
-/help
-/reset
+*Available Commands:*
+/start - Open the welcome menu
+/help - Show all available commands
+/profile - View your saved profile
+/editprofile - Update your profile details
+/setupmemory - Save or update your memories
+/memory - View your saved memories
+/addtimeline - Add a timeline memory
+/timeline - View your timeline memories
+/reset - Reset memories or full profile
 
-Unlocked After Signup:
-/love
-/surprise
-/memory
-/setupmemory
-/reasons
-/lovecode
+💡 *Suggested Flow:*
+1. /profile
+2. /editprofile (if needed)
+3. /setupmemory
+4. /memory
+5. /addtimeline Title | Date | Note
+6. /timeline`
+            : `✨ *Love Bot Help* ✨
 
-💡 Tip:
-Use /setupmemory first to save your special memories, then use /memory to replay them ❤️`
-            : `✨ Love Bot Help ✨
+*Available Commands Before Signup:*
+/start - Open the welcome menu
+/help - Show available commands
+/signup - Complete your profile setup
+/reset - Reset your data if needed
 
-Available Before Signup:
-/start
-/signup
-/profile
-/help
-/reset
+⚠️ *Important:*
+Complete /signup first to unlock profile, memory, and timeline features ❤️`;
 
-⚠️ Important:
-Complete /signup first to unlock all Love Bot features ❤️`;
-
-          await bot.sendMessage(chatId, helpText);
+          await bot.sendMessage(chatId, helpText, {
+            parse_mode: "Markdown",
+          });
           break;
         }
 
@@ -266,14 +286,25 @@ Complete /signup first to unlock all Love Bot features ❤️`;
 
         case "confirm_reset_no": {
           await handleResetCancel(bot, chatId);
+
+          const user = await getUserData(chatId);
+          const profile = await getProfileData(chatId);
+
+          if (user) {
+            await sendMainMenu(
+              bot,
+              chatId,
+              profile?.name || user?.firstName || "there",
+            );
+          }
           break;
         }
 
         // =========================
-        // PROTECTED ACTIONS
+        // FEATURE BUTTONS
         // =========================
 
-        case "setupmemory": {
+        case "setup_memory": {
           clearSignupStep(chatId);
 
           if (editProfileStep[chatId]) {
@@ -286,37 +317,6 @@ Complete /signup first to unlock all Love Bot features ❤️`;
           await bot.sendMessage(
             chatId,
             "❤️ Let's set up your full memory journey!\n\nWhen did you first meet?",
-          );
-          break;
-        }
-
-        case "love": {
-          await sendWithTyping(
-            bot,
-            chatId,
-            "You are the most special person in my life ❤️",
-            1500,
-          );
-          break;
-        }
-
-        case "surprise": {
-          const surprises = [
-            "You are my favorite surprise every day ❤️",
-            "You are my happy place 😊❤️",
-            "You make my world more beautiful 🌍❤️",
-            "You are the reason behind my smile 😘",
-            "Even on bad days, thinking of you makes everything better 💕",
-          ];
-
-          const randomMessage =
-            surprises[Math.floor(Math.random() * surprises.length)];
-
-          await sendWithTyping(
-            bot,
-            chatId,
-            `🎁 Surprise for you:\n\n${randomMessage}`,
-            1500,
           );
           break;
         }
@@ -396,36 +396,42 @@ Special Moment: ${specialMoment}`;
           break;
         }
 
-        case "reasons": {
-          const reasons = [
-            "Because your smile brightens my darkest days ❤️",
-            "Because talking to you feels like home 🏡❤️",
-            "Because you make ordinary moments feel magical ✨",
-            "Because you understand me in ways no one else can 💕",
-            "Because life feels better with you in it 🌹",
-          ];
+        case "timeline": {
+          const user = await User.findOne({ chatId });
 
-          const reasonText = reasons
-            .map((reason, index) => `${index + 1}. ${reason}`)
-            .join("\n");
+          if (!user) {
+            await bot.sendMessage(chatId, "Please use /start first ❤️");
+            break;
+          }
 
-          await sendWithTyping(
-            bot,
-            chatId,
-            `💌 Reasons I love you:\n\n${reasonText}`,
-            1500,
+          if (!Array.isArray(user.timeline) || user.timeline.length === 0) {
+            await bot.sendMessage(
+              chatId,
+              "📭 No timeline memories yet.\n\nUse /addtimeline to add your first special memory ❤️",
+            );
+            break;
+          }
+
+          const timeline = [...user.timeline].sort(
+            (a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0),
           );
+
+          let message = "📅 *Your Memory Timeline* ❤️\n\n";
+
+          timeline.forEach((item, index) => {
+            message += `${index + 1}️⃣ *${item.title || "Untitled Memory"}*\n`;
+            message += `📆 ${item.date || "No date"}\n`;
+            message += `📝 ${item.note || "No note"}\n\n`;
+          });
+
+          await sendWithTyping(bot, chatId, message.trim(), 1200);
           break;
         }
 
-        case "lovecode": {
-          const loveCode = Math.floor(100000 + Math.random() * 900000);
-
-          await sendWithTyping(
-            bot,
+        case "add_timeline_help": {
+          await bot.sendMessage(
             chatId,
-            `🔢 Your Love Code is: ${loveCode} ❤️`,
-            1200,
+            "📝 To add a timeline memory, use this format:\n\n/addtimeline Title | Date | Note\n\nExample:\n/addtimeline First Meet | 14-02-2024 | We met for the first time ❤️",
           );
           break;
         }
@@ -435,8 +441,6 @@ Special Moment: ${specialMoment}`;
           break;
         }
       }
-
-      await bot.answerCallbackQuery(query.id);
     } catch (err) {
       console.error("Inline button error:", err);
 
@@ -446,6 +450,12 @@ Special Moment: ${specialMoment}`;
           show_alert: false,
         });
       } catch (e) {}
+      return;
     }
+
+    // Always close callback spinner
+    try {
+      await bot.answerCallbackQuery(query.id);
+    } catch (e) {}
   });
 };
